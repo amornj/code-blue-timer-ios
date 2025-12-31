@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Play, Square, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Play, Square, AlertTriangle, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 import CPRTimer from '@/components/cpr/CPRTimer';
@@ -16,6 +16,17 @@ import EventLog from '@/components/cpr/EventLog';
 const CYCLE_DURATION = 120; // 2 minutes in seconds
 
 export default function CPRTracker() {
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const authenticated = await base44.auth.isAuthenticated();
+      setIsAuthenticated(authenticated);
+    };
+    checkAuth();
+  }, []);
+
   // Session state
   const [isRunning, setIsRunning] = useState(false);
   const [totalSeconds, setTotalSeconds] = useState(0);
@@ -285,12 +296,138 @@ export default function CPRTracker() {
       notes
     };
 
-    await base44.entities.CPRSession.create(sessionData);
+    if (isAuthenticated) {
+      await base44.entities.CPRSession.create(sessionData);
+    }
     setShowEndDialog(false);
     setOutcome('');
     setNotes('');
     handleReset();
     window.location.reload();
+  };
+
+  const exportGuestPDF = () => {
+    const formatTime = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatOutcome = (outcome) => {
+      switch (outcome) {
+        case 'ROSC': return 'ROSC';
+        case 'deceased': return 'Deceased';
+        case 'VA_ECMO': return 'VA ECMO';
+        case 'ongoing': return 'Ongoing';
+        case 'transferred': return 'Transferred';
+        default: return outcome || 'N/A';
+      }
+    };
+
+    const report = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CPR Session Report</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }
+    h1 { color: #1e40af; border-bottom: 2px solid #1e40af; padding-bottom: 5px; font-size: 18px; margin: 0 0 10px 0; }
+    h2 { color: #374151; font-size: 12px; margin: 10px 0 5px 0; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+    .summary-box { background: #f3f4f6; padding: 8px; border-radius: 4px; }
+    .summary-box label { font-size: 9px; color: #6b7280; text-transform: uppercase; display: block; }
+    .summary-box value { font-size: 14px; font-weight: bold; display: block; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9px; }
+    th, td { padding: 4px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f9fafb; font-weight: 600; }
+    .compact-table { font-size: 8px; }
+    .compact-table th, .compact-table td { padding: 2px 4px; }
+  </style>
+</head>
+<body>
+  <h1>🏥 CPR Session Report</h1>
+  
+  <div class="summary-grid">
+    <div class="summary-box">
+      <label>Start Time</label>
+      <value>${startTime || 'N/A'}</value>
+    </div>
+    <div class="summary-box">
+      <label>Duration</label>
+      <value>${formatTime(totalSeconds)}</value>
+    </div>
+    <div class="summary-box">
+      <label>Cycles</label>
+      <value>${currentCycle}</value>
+    </div>
+    <div class="summary-box">
+      <label>Current Rhythm</label>
+      <value>${currentRhythm || 'N/A'}</value>
+    </div>
+  </div>
+
+  <h2>📊 Summary</h2>
+  <table class="compact-table">
+    <tr>
+      <td><strong>Shocks:</strong> ${shockCount}</td>
+      <td><strong>Adrenaline:</strong> ${adrenalineCount} doses</td>
+      <td><strong>Amiodarone:</strong> ${amiodaroneTotal} mg</td>
+      <td><strong>Compressor Changes:</strong> ${compressorChanges}</td>
+    </tr>
+  </table>
+
+  <h2>💉 Medications</h2>
+  <table class="compact-table">
+    <tr><th>Time</th><th>Medication</th><th>Dose</th><th>Cycle</th></tr>
+    ${events.filter(e => e.type === 'adrenaline' || e.type === 'amiodarone').map(e => `
+      <tr>
+        <td>${e.cprTime}</td>
+        <td>${e.type === 'adrenaline' ? 'Adrenaline' : 'Amiodarone'}</td>
+        <td>${e.dose || '1'} mg</td>
+        <td>${e.cycle || 'N/A'}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="4">None</td></tr>'}
+  </table>
+
+  <h2>⚡ Defibrillation</h2>
+  <table class="compact-table">
+    <tr><th>Time</th><th>Shock #</th><th>Energy</th><th>Rhythm</th></tr>
+    ${events.filter(e => e.type === 'shock').map((e, i) => `
+      <tr>
+        <td>${e.cprTime}</td>
+        <td>${i + 1}</td>
+        <td>${e.energy || 'N/A'}J</td>
+        <td>${e.rhythmBefore || 'N/A'}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="4">None</td></tr>'}
+  </table>
+
+  <h2>📋 Event Log</h2>
+  <table class="compact-table">
+    <tr><th>Time</th><th>Event</th><th>Details</th></tr>
+    ${events.slice(0, 20).map(e => `
+      <tr>
+        <td>${e.cprTime}</td>
+        <td>${e.type.toUpperCase()}</td>
+        <td>${e.message}</td>
+      </tr>
+    `).join('')}
+  </table>
+
+  <p style="margin-top: 10px; color: #6b7280; font-size: 8px; text-align: center;">
+    Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant
+  </p>
+</body>
+</html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(report);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
@@ -340,15 +477,27 @@ export default function CPRTracker() {
                 Pause
               </Button>
             )}
-            
-            <Button 
-              onClick={() => setShowConfirmEnd(true)}
-              variant="outline"
-              className="border-red-600 text-red-400 hover:bg-red-900/50 h-12"
-              disabled={totalSeconds === 0}
-            >
-              End Session
-            </Button>
+
+            {isAuthenticated ? (
+              <Button 
+                onClick={() => setShowConfirmEnd(true)}
+                variant="outline"
+                className="border-red-600 text-red-400 hover:bg-red-900/50 h-12"
+                disabled={totalSeconds === 0}
+              >
+                End Session
+              </Button>
+            ) : (
+              <Button 
+                onClick={exportGuestPDF}
+                variant="outline"
+                className="border-blue-600 text-blue-400 hover:bg-blue-900/50 h-12"
+                disabled={totalSeconds === 0}
+              >
+                <FileText className="w-5 h-5 mr-2" />
+                Export PDF
+              </Button>
+            )}
           </div>
         </div>
       </div>

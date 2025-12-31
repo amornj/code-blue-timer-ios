@@ -1,9 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
-import { Activity, FileText } from 'lucide-react';
+import { Activity, FileText, LogIn, LogOut } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
 
 export default function Layout({ children, currentPageName }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const authenticated = await base44.auth.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      if (authenticated) {
+        try {
+          const userData = await base44.auth.me();
+          setUser(userData);
+        } catch (e) {
+          setIsAuthenticated(false);
+        }
+      }
+    };
+    checkAuth();
+  }, []);
+
+  const handleLogout = () => {
+    base44.auth.logout();
+  };
+
+  const handleLogin = () => {
+    base44.auth.redirectToLogin();
+  };
+
   const navItems = [
     { name: 'CPRTracker', label: 'CPR Tracker', icon: Activity },
     { name: 'Records', label: 'Records', icon: FileText }
@@ -41,10 +70,36 @@ export default function Layout({ children, currentPageName }) {
                   );
                 })}
               </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+              </div>
+
+              <div className="flex items-center gap-3">
+              {isAuthenticated ? (
+                <>
+                  <span className="text-sm text-slate-400">{user?.email}</span>
+                  <Button
+                    onClick={handleLogout}
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={handleLogin}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Login
+                </Button>
+              )}
+              </div>
+              </div>
+              </div>
+              </nav>
 
       {/* Main Content */}
       <main>

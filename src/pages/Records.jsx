@@ -11,6 +11,21 @@ import { format } from 'date-fns';
 import JSZip from 'jszip';
 
 export default function Records() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const authenticated = await base44.auth.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      setLoading(false);
+      if (!authenticated) {
+        base44.auth.redirectToLogin(window.location.href);
+      }
+    };
+    checkAuth();
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [viewingRecord, setViewingRecord] = useState(null);
@@ -20,8 +35,21 @@ export default function Records() {
   const { data: sessions, refetch } = useQuery({
     queryKey: ['cpr-sessions'],
     queryFn: () => base44.entities.CPRSession.list('-created_date'),
-    initialData: []
+    initialData: [],
+    enabled: isAuthenticated
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-slate-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const filteredSessions = sessions.filter(session => {
     const searchLower = searchTerm.toLowerCase();
