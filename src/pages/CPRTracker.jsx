@@ -33,6 +33,8 @@ export default function CPRTracker() {
   const [cycleSeconds, setCycleSeconds] = useState(0);
   const [currentCycle, setCurrentCycle] = useState(1);
   const [startTime, setStartTime] = useState(null);
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const [finalOutcome, setFinalOutcome] = useState('');
 
   // Clinical state
   const [currentRhythm, setCurrentRhythm] = useState(null);
@@ -253,6 +255,8 @@ export default function CPRTracker() {
 
   const handleEndSession = async () => {
     setIsRunning(false);
+    setSessionEnded(true);
+    setFinalOutcome(outcome);
     
     const sessionData = {
       start_time: startTime,
@@ -298,17 +302,11 @@ export default function CPRTracker() {
 
     if (isAuthenticated) {
       await base44.entities.CPRSession.create(sessionData);
-      setShowEndDialog(false);
-      setOutcome('');
-      setNotes('');
-      handleReset();
-      window.location.reload();
-    } else {
-      // Guest mode: just close dialog and keep data visible
-      setShowEndDialog(false);
-      setOutcome('');
-      setNotes('');
     }
+    
+    setShowEndDialog(false);
+    setOutcome('');
+    setNotes('');
   };
 
   const exportGuestPDF = () => {
@@ -328,6 +326,10 @@ export default function CPRTracker() {
         default: return outcome || 'N/A';
       }
     };
+
+    const outcomeText = sessionEnded && finalOutcome 
+      ? formatOutcome(finalOutcome)
+      : 'Ongoing - CPR in progress';
 
     const report = `
 <!DOCTYPE html>
@@ -367,10 +369,16 @@ export default function CPRTracker() {
       <value>${currentCycle}</value>
     </div>
     <div class="summary-box">
-      <label>Current Rhythm</label>
-      <value>${currentRhythm || 'N/A'}</value>
+      <label>${sessionEnded && finalOutcome ? 'Outcome' : 'Current Rhythm'}</label>
+      <value>${sessionEnded && finalOutcome ? outcomeText : (currentRhythm || 'N/A')}</value>
     </div>
   </div>
+
+  ${!sessionEnded || !finalOutcome ? `
+  <div style="margin: 8px 0; padding: 8px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; color: #92400e; font-size: 10px;">
+    <strong>⚠️ CPR Effort Ongoing:</strong> This report was generated during an active CPR session. Final outcome has not been determined.
+  </div>
+  ` : ''}
 
   <h2>📊 Summary</h2>
   <table class="compact-table">
@@ -472,6 +480,14 @@ export default function CPRTracker() {
               >
                 <Play className="w-5 h-5 mr-2" />
                 Start CPR
+              </Button>
+            ) : sessionEnded ? (
+              <Button 
+                disabled
+                className="bg-slate-700 text-slate-400 px-6 h-12 text-lg font-semibold cursor-not-allowed"
+              >
+                <Square className="w-5 h-5 mr-2" />
+                Session Ended
               </Button>
             ) : (
               <Button 
