@@ -96,8 +96,8 @@ export default function EventBanner({
                     onClick={() => onAdrenalineFrequencyChange(freq)}
                     className={`w-7 h-7 rounded-md text-xs font-bold transition-all ${
                       event.frequency === freq
-                        ? 'bg-red-500 text-white shadow-md'
-                        : 'bg-red-900/30 text-red-300 hover:bg-red-800/50'
+                        ? 'bg-black/40 text-white shadow-md border border-current'
+                        : 'bg-black/20 text-current/60 hover:bg-black/30'
                     }`}
                   >
                     {freq}

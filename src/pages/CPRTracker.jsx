@@ -222,14 +222,14 @@ export default function CPRTracker() {
   };
 
   const handleConfirmCompressorChange = () => {
-    setCompressorChanges(prev => prev + 1);
+    const newCount = compressorChanges + 1;
+    setCompressorChanges(newCount);
     if (lucasActive) {
       setLucasActive(false);
       addEvent('compressor', `Resumed manual chest compressions (Cycle ${currentCycle})`);
     } else {
       addEvent('compressor', `Compressor changed (Cycle ${currentCycle})`);
     }
-    // Don't move to next cycle here - only pulse check does that
   };
 
   const handleToggleLucas = () => {
@@ -243,9 +243,10 @@ export default function CPRTracker() {
   };
 
   const handleConfirmPulseCheck = () => {
-    setPulseChecks(prev => prev + 1);
+    const newCount = pulseChecks + 1;
+    setPulseChecks(newCount);
     addEvent('pulse', `Pulse check performed (Cycle ${currentCycle})`);
-    // Move to next cycle
+    // Move to next cycle only after pulse check
     setCurrentCycle(prev => prev + 1);
     setCycleSeconds(0);
     addEvent('cycle', `Cycle ${currentCycle + 1} started`);
