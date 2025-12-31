@@ -13,19 +13,6 @@ import JSZip from 'jszip';
 export default function Records() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const authenticated = await base44.auth.isAuthenticated();
-      setIsAuthenticated(authenticated);
-      setLoading(false);
-      if (!authenticated) {
-        base44.auth.redirectToLogin(window.location.href);
-      }
-    };
-    checkAuth();
-  }, []);
-
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [viewingRecord, setViewingRecord] = useState(null);
@@ -38,6 +25,18 @@ export default function Records() {
     initialData: [],
     enabled: isAuthenticated
   });
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const authenticated = await base44.auth.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      setLoading(false);
+      if (!authenticated) {
+        base44.auth.redirectToLogin(window.location.href);
+      }
+    };
+    checkAuth();
+  }, []);
 
   if (loading) {
     return (
