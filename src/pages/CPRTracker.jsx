@@ -102,13 +102,13 @@ export default function CPRTracker() {
         type: 'compressor',
         label: lucasActive ? 'Resume Chest Compressor' : 'Change Compressor',
         timing: 'Every cycle',
-        status: lucasActive ? 'pending' : (cycleComplete ? 'active' : 'pending')
+        status: lucasActive ? 'pending' : (cycleComplete && compressorChanges < cycle ? 'active' : (compressorChanges >= cycle ? 'completed' : 'pending'))
       },
       {
         type: 'pulse',
         label: 'Pulse Check',
         timing: '< 10 seconds',
-        status: cycleComplete ? 'active' : 'pending'
+        status: cycleComplete && pulseChecks < cycle ? 'active' : (pulseChecks >= cycle ? 'completed' : 'pending')
       },
       {
         type: 'adrenaline',
@@ -118,26 +118,24 @@ export default function CPRTracker() {
                 (cycle === 1 ? 'pending' : // Always pending on cycle 1
                  adrenalineCount >= expectedAdrenalineCount ? 'completed' : 'pending')
       },
-      {
+      ...(amiodaroneTotal < 300 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 300mg',
         timing: 'After cycle 3',
         dose: 300,
-        status: amiodarone300Due ? 'active' : 
-                (amiodaroneTotal >= 300 ? 'completed' : 'pending')
-      },
-      {
+        status: amiodarone300Due ? 'active' : 'pending'
+      }] : []),
+      ...(amiodaroneTotal >= 300 && amiodaroneTotal < 450 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 150mg',
         timing: 'After cycle 5',
         dose: 150,
-        status: amiodarone150Due ? 'active' : 
-                (amiodaroneTotal >= 450 ? 'completed' : 'pending')
-      }
+        status: amiodarone150Due ? 'active' : 'pending'
+      }] : [])
     ];
     
     setBannerEvents(newBannerEvents);
-  }, [currentCycle, cycleSeconds, adrenalineCount, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due]);
+  }, [currentCycle, cycleSeconds, adrenalineCount, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive]);
 
   // Timer effect
   useEffect(() => {
@@ -202,6 +200,7 @@ export default function CPRTracker() {
     } else {
       addEvent('compressor', `Compressor changed (Cycle ${currentCycle})`);
     }
+    // Don't move to next cycle here - only pulse check does that
   };
 
   const handleToggleLucas = () => {
@@ -529,6 +528,38 @@ export default function CPRTracker() {
           onConfirmAmiodarone={handleConfirmAmiodarone}
         />
 
+        {/* Rhythm and Shock Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <RhythmSelector 
+            currentRhythm={currentRhythm} 
+            onRhythmChange={handleRhythmChange} 
+          />
+          
+          <div className="space-y-4">
+            <ShockButton 
+              isShockable={isShockable}
+              onShockDelivered={handleShockDelivered}
+              shockCount={shockCount}
+            />
+            
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
+                <div className="text-3xl font-bold text-red-400">{adrenalineCount}</div>
+                <div className="text-xs text-slate-400 mt-1">Adrenaline Doses</div>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
+                <div className="text-3xl font-bold text-purple-400">{amiodaroneTotal}</div>
+                <div className="text-xs text-slate-400 mt-1">Amiodarone (mg)</div>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
+                <div className="text-3xl font-bold text-yellow-400">{shockCount}</div>
+                <div className="text-xs text-slate-400 mt-1">Shocks</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* LUCAS and Notes Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
@@ -571,38 +602,6 @@ export default function CPRTracker() {
             />
             <div className="text-xs text-slate-500 mt-1 text-right">
               {doctorNotes.length}/200 characters
-            </div>
-          </div>
-        </div>
-
-        {/* Rhythm and Shock Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RhythmSelector 
-            currentRhythm={currentRhythm} 
-            onRhythmChange={handleRhythmChange} 
-          />
-          
-          <div className="space-y-4">
-            <ShockButton 
-              isShockable={isShockable}
-              onShockDelivered={handleShockDelivered}
-              shockCount={shockCount}
-            />
-            
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
-                <div className="text-3xl font-bold text-red-400">{adrenalineCount}</div>
-                <div className="text-xs text-slate-400 mt-1">Adrenaline Doses</div>
-              </div>
-              <div className="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
-                <div className="text-3xl font-bold text-purple-400">{amiodaroneTotal}</div>
-                <div className="text-xs text-slate-400 mt-1">Amiodarone (mg)</div>
-              </div>
-              <div className="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
-                <div className="text-3xl font-bold text-yellow-400">{shockCount}</div>
-                <div className="text-xs text-slate-400 mt-1">Shocks</div>
-              </div>
             </div>
           </div>
         </div>
