@@ -42,9 +42,8 @@ export default function DiscretionaryMedication({ onAddMedication }) {
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
       <div className="flex items-center gap-2 mb-4">
         <Pill className="w-5 h-5 text-indigo-400" />
-        <h3 className="text-slate-300 font-semibold">Discretionary Medication</h3>
+        <h3 className="text-slate-300 font-semibold">Custom Medicine</h3>
       </div>
-      <p className="text-xs text-slate-500 mb-4">Record non-protocol medications (documentation only)</p>
 
       <div className="space-y-3">
         <div>
