@@ -296,6 +296,7 @@ export default function CPRTracker() {
         timestamp: e.timestamp
       })),
       outcome,
+      doctor_notes: doctorNotes,
       notes
     };
 
@@ -525,6 +526,14 @@ export default function CPRTracker() {
           />
         </div>
 
+        {/* Rhythm Selector */}
+        <RhythmSelector 
+          currentRhythm={currentRhythm} 
+          onRhythmChange={handleRhythmChange}
+          onShockDelivered={handleShockDelivered}
+          shockCount={shockCount}
+        />
+
         {/* Event Banners */}
         <EventBanner 
           events={bannerEvents}
@@ -532,14 +541,6 @@ export default function CPRTracker() {
           onConfirmPulseCheck={handleConfirmPulseCheck}
           onConfirmAdrenaline={handleConfirmAdrenaline}
           onConfirmAmiodarone={handleConfirmAmiodarone}
-        />
-
-        {/* Rhythm Selector */}
-        <RhythmSelector 
-          currentRhythm={currentRhythm} 
-          onRhythmChange={handleRhythmChange}
-          onShockDelivered={handleShockDelivered}
-          shockCount={shockCount}
         />
 
         {/* LUCAS and Notes Section */}

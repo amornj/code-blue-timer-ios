@@ -301,8 +301,15 @@ export default function Records() {
     `).join('') || '<tr><td colspan="3">None recorded</td></tr>'}
   </table>
 
+  ${record.doctor_notes ? `
+  <h2>📝 CPR Note</h2>
+  <div style="padding: 8px; background: #f9fafb; border-radius: 4px; font-size: 9px; border: 1px solid #e5e7eb;">
+    ${record.doctor_notes}
+  </div>
+  ` : ''}
+
   ${record.notes ? `
-  <h2>📝 Additional Notes</h2>
+  <h2>📝 Post CPR Note</h2>
   <div style="padding: 8px; background: #f9fafb; border-radius: 4px; font-size: 9px; border: 1px solid #e5e7eb;">
     ${record.notes}
   </div>
@@ -654,17 +661,17 @@ export default function Records() {
               />
             </div>
             <div>
-              <Label>Notes (max 80 characters)</Label>
+              <Label>Notes (max 200 characters)</Label>
               <Textarea
                 value={editForm.notes}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value.slice(0, 80) })}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value.slice(0, 200) })}
                 placeholder="Add notes..."
-                maxLength={80}
+                maxLength={200}
                 className="resize-none"
-                rows={2}
+                rows={3}
               />
               <div className="text-xs text-slate-500 mt-1 text-right">
-                {editForm.notes.length}/80 characters
+                {editForm.notes.length}/200 characters
               </div>
             </div>
             <div className="flex gap-3 pt-4">
