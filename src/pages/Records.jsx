@@ -371,7 +371,7 @@ export default function Records() {
     setReportDialog(null);
   };
 
-  const oldExportSingleRecordPDF_HTML = (record) => {
+  const viewHTMLReport = (record) => {
     const formatOutcome = (outcome) => {
       switch (outcome) {
         case 'ROSC': return 'ROSC';
@@ -512,6 +512,11 @@ export default function Records() {
   </body>
   </html>
   `;
+  
+    // Open in new window
+    const reportWindow = window.open('', '_blank');
+    reportWindow.document.write(report);
+    reportWindow.document.close();
   };
 
   return (
@@ -789,6 +794,13 @@ export default function Records() {
                   className="flex-1"
                 >
                   Cancel
+                </Button>
+                <Button
+                  onClick={() => viewHTMLReport(reportDialog)}
+                  className="flex-1 bg-slate-600 hover:bg-slate-700"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View HTML
                 </Button>
                 <Button
                   onClick={() => exportSingleRecordPDF(reportDialog)}
