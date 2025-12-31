@@ -171,8 +171,6 @@ export default function Records() {
     URL.revokeObjectURL(zipUrl);
   };
 
-  const [reportDialog, setReportDialog] = useState(null);
-
   const exportSingleRecordPDF = (record) => {
     const formatOutcome = (outcome) => {
       switch (outcome) {
