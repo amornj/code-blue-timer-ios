@@ -18,6 +18,7 @@ export default function Records() {
   const [viewingRecord, setViewingRecord] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
   const [editForm, setEditForm] = useState({ patient_name: '', hospital_number: '', hospital_name: '' });
+  const [reportDialog, setReportDialog] = useState(null);
 
   const { data: sessions, refetch } = useQuery({
     queryKey: ['cpr-sessions'],
