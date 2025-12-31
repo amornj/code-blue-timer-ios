@@ -14,6 +14,7 @@ import EventBanner from '@/components/cpr/EventBanner';
 import RhythmSelector from '@/components/cpr/RhythmSelector';
 import ShockButton from '@/components/cpr/ShockButton';
 import EventLog from '@/components/cpr/EventLog';
+import DiscretionaryMedication from '@/components/cpr/DiscretionaryMedication';
 
 const CYCLE_DURATION = 120; // 2 minutes in seconds
 
@@ -67,6 +68,9 @@ export default function CPRTracker() {
   // LUCAS device and doctor notes
   const [lucasActive, setLucasActive] = useState(false);
   const [doctorNotes, setDoctorNotes] = useState('');
+  
+  // Discretionary medications
+  const [discretionaryMeds, setDiscretionaryMeds] = useState([]);
 
   // Event tracking
   const [events, setEvents] = useState([]);
@@ -275,6 +279,7 @@ export default function CPRTracker() {
     setLastLidocaineTime(null);
     setLidocaine1mgDue(false);
     setLidocaine05mgDue(false);
+    setDiscretionaryMeds([]);
   };
 
   const handleConfirmCompressorChange = () => {
@@ -338,6 +343,18 @@ export default function CPRTracker() {
       setLidocaine05mgDue(false);
     }
     addEvent('lidocaine', `Lidocaine ${dose} mg/kg administered (cumulative: ${lidocaineCumulativeDose + dose} mg/kg)`, { dose });
+  };
+
+  const handleAddDiscretionaryMed = ({ medication, dosage }) => {
+    const medEntry = {
+      medication,
+      dosage,
+      cycle: currentCycle,
+      timestamp: new Date().toLocaleTimeString(),
+      cprTime: formatCPRTime(totalSeconds)
+    };
+    setDiscretionaryMeds(prev => [...prev, medEntry]);
+    addEvent('discretionary_med', `${medication} - ${dosage} administered`, { medication, dosage });
   };
 
   const handleRhythmChange = (rhythm) => {
@@ -423,6 +440,7 @@ export default function CPRTracker() {
         cycle: e.cycle,
         timestamp: e.timestamp
       })),
+      discretionary_medications: discretionaryMeds,
       outcome,
       doctor_notes: doctorNotes,
       notes
@@ -501,7 +519,7 @@ export default function CPRTracker() {
     yPos += 10;
 
     // Medications Table
-    const medEvents = events.filter(e => e.type === 'adrenaline' || e.type === 'amiodarone' || e.type === 'lidocaine');
+    const medEvents = events.filter(e => e.type === 'adrenaline' || e.type === 'amiodarone' || e.type === 'lidocaine' || e.type === 'discretionary_med');
     if (medEvents.length > 0) {
       doc.setFontSize(11);
       doc.text('Medications', 15, yPos);
@@ -511,8 +529,13 @@ export default function CPRTracker() {
         head: [['Time', 'Medication', 'Dose', 'Cycle']],
         body: medEvents.map(e => [
           e.cprTime,
-          e.type === 'adrenaline' ? 'Adrenaline' : e.type === 'amiodarone' ? 'Amiodarone' : 'Lidocaine',
-          e.type === 'lidocaine' ? `${e.dose} mg/kg` : `${e.dose || 1} mg`,
+          e.type === 'adrenaline' ? 'Adrenaline' : 
+          e.type === 'amiodarone' ? 'Amiodarone' : 
+          e.type === 'lidocaine' ? 'Lidocaine' : 
+          e.medication || 'Other',
+          e.type === 'lidocaine' ? `${e.dose} mg/kg` : 
+          e.type === 'discretionary_med' ? e.dosage :
+          `${e.dose || 1} mg`,
           e.cycle || 'N/A'
         ]),
         theme: 'striped',
@@ -686,8 +709,10 @@ export default function CPRTracker() {
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
         />
 
-        {/* LUCAS and Notes Section */}
+        {/* Discretionary Medication and LUCAS Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DiscretionaryMedication onAddMedication={handleAddDiscretionaryMed} />
+
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -712,9 +737,12 @@ export default function CPRTracker() {
                 ✓ Mechanical compressions active - Manual compressor changes disabled
               </div>
             )}
-          </div>
+            </div>
+            </div>
 
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
+            {/* Notes Section */}
+            <div className="grid grid-cols-1 gap-6">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
             <label className="text-slate-300 font-semibold mb-2 block">
               📝 Notes
             </label>
@@ -728,9 +756,9 @@ export default function CPRTracker() {
             />
             <div className="text-xs text-slate-500 mt-1 text-right">
               {doctorNotes.length}/200 characters
-            </div>
-          </div>
-        </div>
+              </div>
+              </div>
+              </div>
 
         {/* Event Log */}
         <EventLog events={events} />
