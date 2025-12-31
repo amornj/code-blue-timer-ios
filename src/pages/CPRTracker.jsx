@@ -40,7 +40,9 @@ export default function CPRTracker() {
 
   // Clinical state
   const [currentRhythm, setCurrentRhythm] = useState(null);
+  const [initialRhythm, setInitialRhythm] = useState(null);
   const [shockCount, setShockCount] = useState(0);
+  const [shocksInCurrentShockableRhythm, setShocksInCurrentShockableRhythm] = useState(0);
   const [adrenalineCount, setAdrenalineCount] = useState(0);
   const [amiodaroneTotal, setAmiodaroneTotal] = useState(0);
   const [compressorChanges, setCompressorChanges] = useState(0);
@@ -106,12 +108,22 @@ export default function CPRTracker() {
       setAdrenalineDue(true);
     }
     
-    // Check amiodarone timing
-    if (cycle >= 3 && cycleComplete && amiodaroneTotal < 300) {
-      setAmiodarone300Due(true);
-    }
-    if (cycle >= 5 && cycleComplete && amiodaroneTotal >= 300 && amiodaroneTotal < 450) {
-      setAmiodarone150Due(true);
+    // Check amiodarone timing - only for shockable rhythms
+    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
+    const initialWasNonShockable = initialRhythm === 'PEA' || initialRhythm === 'Asystole';
+    
+    // Amiodarone rules:
+    // - If initial rhythm was non-shockable and still non-shockable → never show
+    // - If in shockable rhythm → show based on shock count in this shockable episode
+    if (isShockable) {
+      // After 3rd shock → 300mg
+      if (shocksInCurrentShockableRhythm >= 3 && amiodaroneTotal < 300) {
+        setAmiodarone300Due(true);
+      }
+      // After 5th shock → 150mg
+      if (shocksInCurrentShockableRhythm >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450) {
+        setAmiodarone150Due(true);
+      }
     }
     
     // Determine adrenaline status
@@ -124,6 +136,8 @@ export default function CPRTracker() {
         adrenalineStatus = 'completed';
       }
     }
+    
+    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     
     const newBannerEvents = [
       {
@@ -145,24 +159,24 @@ export default function CPRTracker() {
         status: adrenalineStatus,
         frequency: adrenalineFrequency
       },
-      ...(amiodaroneTotal < 300 ? [{
+      ...(isShockable && amiodaroneTotal < 300 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 300mg',
-        timing: 'After cycle 3',
+        timing: 'After 3rd shock',
         dose: 300,
         status: amiodarone300Due ? 'active' : 'pending'
       }] : []),
-      ...(amiodaroneTotal >= 300 && amiodaroneTotal < 450 ? [{
+      ...(isShockable && amiodaroneTotal >= 300 && amiodaroneTotal < 450 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 150mg',
-        timing: 'After cycle 5',
+        timing: 'After 5th shock',
         dose: 150,
         status: amiodarone150Due ? 'active' : 'pending'
       }] : [])
     ];
     
     setBannerEvents(newBannerEvents);
-  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive]);
+  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, shocksInCurrentShockableRhythm, initialRhythm]);
 
   // Timer effect
   useEffect(() => {
@@ -205,7 +219,9 @@ export default function CPRTracker() {
     setCycleSeconds(0);
     setCurrentCycle(1);
     setCurrentRhythm(null);
+    setInitialRhythm(null);
     setShockCount(0);
+    setShocksInCurrentShockableRhythm(0);
     setAdrenalineCount(0);
     setAmiodaroneTotal(0);
     setCompressorChanges(0);
@@ -276,11 +292,26 @@ export default function CPRTracker() {
   const handleRhythmChange = (rhythm) => {
     const prevRhythm = currentRhythm;
     setCurrentRhythm(rhythm);
+    
+    // Track initial rhythm
+    if (!initialRhythm) {
+      setInitialRhythm(rhythm);
+    }
+    
+    // Reset shock counter when transitioning to shockable rhythm from non-shockable
+    const prevWasNonShockable = !prevRhythm || prevRhythm === 'PEA' || prevRhythm === 'Asystole' || prevRhythm === 'Sinus';
+    const nowIsShockable = rhythm === 'VF' || rhythm === 'pVT';
+    
+    if (prevWasNonShockable && nowIsShockable) {
+      setShocksInCurrentShockableRhythm(0);
+    }
+    
     addEvent('rhythm', `Rhythm identified: ${rhythm}${prevRhythm ? ` (was ${prevRhythm})` : ''}`);
   };
 
   const handleShockDelivered = (energy) => {
     setShockCount(prev => prev + 1);
+    setShocksInCurrentShockableRhythm(prev => prev + 1);
     addEvent('shock', `Shock delivered @ ${energy}J (Shock #${shockCount + 1})`, { 
       energy, 
       rhythmBefore: currentRhythm 
@@ -592,6 +623,15 @@ export default function CPRTracker() {
           onShockDelivered={handleShockDelivered}
           shockCount={shockCount}
         />
+
+        {/* Non-Shockable Rhythm Alert */}
+        {currentRhythm && (currentRhythm === 'PEA' || currentRhythm === 'Asystole') && (
+          <div className="bg-blue-900/50 border-2 border-blue-500 rounded-xl p-4 text-center">
+            <div className="text-blue-300 font-bold text-lg">
+              ⚠️ Start CPR immediately
+            </div>
+          </div>
+        )}
 
         {/* Event Banners */}
         <EventBanner 
