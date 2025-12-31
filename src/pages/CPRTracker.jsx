@@ -46,6 +46,10 @@ export default function CPRTracker() {
   const [compressorChanges, setCompressorChanges] = useState(0);
   const [pulseChecks, setPulseChecks] = useState(0);
   
+  // Adrenaline frequency and tracking
+  const [adrenalineFrequency, setAdrenalineFrequency] = useState(4); // 3, 4, or 5 minutes
+  const [lastAdrenalineTime, setLastAdrenalineTime] = useState(null);
+  
   // Track which medications are due
   const [adrenalineDue, setAdrenalineDue] = useState(false);
   const [amiodarone300Due, setAmiodarone300Due] = useState(false);
@@ -85,10 +89,24 @@ export default function CPRTracker() {
     const cycle = currentCycle;
     const cycleComplete = cycleSeconds >= CYCLE_DURATION - 5;
     
-    // Check if medications should become due
-    if (cycle % 2 === 0 && cycleComplete && adrenalineCount < Math.floor(cycle / 2)) {
+    // Check adrenaline timing
+    const isPEAorAsystole = currentRhythm === 'PEA' || currentRhythm === 'Asystole';
+    const isFirstCycle = cycle === 1;
+    const timeSinceLastAdrenaline = lastAdrenalineTime ? totalSeconds - lastAdrenalineTime : null;
+    const adrenalineIntervalSeconds = adrenalineFrequency * 60; // Convert minutes to seconds
+    
+    // Adrenaline should be due if:
+    // 1. First cycle AND rhythm is PEA/Asystole
+    // 2. Enough time has passed since last dose based on frequency
+    const shouldShowAdrenaline = 
+      (isFirstCycle && isPEAorAsystole && adrenalineCount === 0) ||
+      (timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds);
+    
+    if (shouldShowAdrenaline && !adrenalineDue) {
       setAdrenalineDue(true);
     }
+    
+    // Check amiodarone timing
     if (cycle >= 3 && cycleComplete && amiodaroneTotal < 300) {
       setAmiodarone300Due(true);
     }
@@ -96,8 +114,16 @@ export default function CPRTracker() {
       setAmiodarone150Due(true);
     }
     
-    // Calculate expected adrenaline count for current cycle
-    const expectedAdrenalineCount = Math.floor(cycle / 2);
+    // Determine adrenaline status
+    let adrenalineStatus = 'pending';
+    if (adrenalineDue) {
+      adrenalineStatus = 'active';
+    } else if (timeSinceLastAdrenaline !== null) {
+      const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
+      if (timeUntilNext > 30) {
+        adrenalineStatus = 'completed';
+      }
+    }
     
     const newBannerEvents = [
       {
@@ -115,10 +141,9 @@ export default function CPRTracker() {
       {
         type: 'adrenaline',
         label: 'Adrenaline 1mg',
-        timing: 'Every 2 cycles',
-        status: adrenalineDue ? 'active' : 
-                (cycle === 1 ? 'pending' : // Always pending on cycle 1
-                 adrenalineCount >= expectedAdrenalineCount ? 'completed' : 'pending')
+        timing: `Every ${adrenalineFrequency} minutes`,
+        status: adrenalineStatus,
+        frequency: adrenalineFrequency
       },
       ...(amiodaroneTotal < 300 ? [{
         type: 'amiodarone',
@@ -137,7 +162,7 @@ export default function CPRTracker() {
     ];
     
     setBannerEvents(newBannerEvents);
-  }, [currentCycle, cycleSeconds, adrenalineCount, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive]);
+  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive]);
 
   // Timer effect
   useEffect(() => {
@@ -192,6 +217,8 @@ export default function CPRTracker() {
     setAmiodarone150Due(false);
     setLucasActive(false);
     setDoctorNotes('');
+    setAdrenalineFrequency(4);
+    setLastAdrenalineTime(null);
   };
 
   const handleConfirmCompressorChange = () => {
@@ -226,8 +253,13 @@ export default function CPRTracker() {
 
   const handleConfirmAdrenaline = () => {
     setAdrenalineCount(prev => prev + 1);
+    setLastAdrenalineTime(totalSeconds);
     setAdrenalineDue(false);
     addEvent('adrenaline', `Adrenaline 1mg administered (Dose #${adrenalineCount + 1})`, { dose: 1 });
+  };
+
+  const handleAdrenalineFrequencyChange = (newFrequency) => {
+    setAdrenalineFrequency(newFrequency);
   };
 
   const handleConfirmAmiodarone = (dose) => {
@@ -567,6 +599,7 @@ export default function CPRTracker() {
           onConfirmPulseCheck={handleConfirmPulseCheck}
           onConfirmAdrenaline={handleConfirmAdrenaline}
           onConfirmAmiodarone={handleConfirmAmiodarone}
+          onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
         />
 
         {/* LUCAS and Notes Section */}

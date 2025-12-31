@@ -1,13 +1,15 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart, Activity, Syringe, Check, AlertTriangle } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 
 export default function EventBanner({ 
   events, 
   onConfirmCompressorChange,
   onConfirmPulseCheck,
   onConfirmAdrenaline,
-  onConfirmAmiodarone
+  onConfirmAmiodarone,
+  onAdrenalineFrequencyChange
 }) {
   const getIcon = (type) => {
     switch (type) {
@@ -61,6 +63,25 @@ export default function EventBanner({
           }`}
         >
           <div className="flex flex-col items-center text-center gap-2">
+            {/* Frequency slider for adrenaline - top right */}
+            {event.type === 'adrenaline' && (
+              <div className="absolute top-2 right-2 flex gap-1">
+                {[3, 4, 5].map(freq => (
+                  <button
+                    key={freq}
+                    onClick={() => onAdrenalineFrequencyChange(freq)}
+                    className={`w-7 h-7 rounded-md text-xs font-bold transition-all ${
+                      event.frequency === freq
+                        ? 'bg-red-500 text-white shadow-md'
+                        : 'bg-red-900/30 text-red-300 hover:bg-red-800/50'
+                    }`}
+                  >
+                    {freq}
+                  </button>
+                ))}
+              </div>
+            )}
+            
             <div className="p-2 rounded-full bg-black/20">
               {event.type === 'compressor' ? <Heart className="w-6 h-6" /> : getIcon(event.type)}
             </div>
