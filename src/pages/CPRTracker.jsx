@@ -12,7 +12,6 @@ import EventBanner from '@/components/cpr/EventBanner';
 import RhythmSelector from '@/components/cpr/RhythmSelector';
 import ShockButton from '@/components/cpr/ShockButton';
 import EventLog from '@/components/cpr/EventLog';
-import PDFExport from '@/components/cpr/PDFExport';
 
 const CYCLE_DURATION = 120; // 2 minutes in seconds
 
@@ -359,8 +358,6 @@ export default function CPRTracker() {
               <RotateCcw className="w-4 h-4 mr-2" />
               Reset
             </Button>
-
-            <PDFExport sessionData={sessionSummary} events={events} />
           </div>
         </div>
       </div>
@@ -478,7 +475,7 @@ export default function CPRTracker() {
             <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-4 text-amber-300 text-sm">
               <p className="font-semibold mb-2">⚠️ Before ending this session:</p>
               <ul className="list-disc list-inside space-y-1">
-                <li>Make sure you've exported the PDF report if needed</li>
+                <li>Get the CPR session report in Records page</li>
                 <li>All data will be saved to the database</li>
                 <li>This action cannot be undone</li>
               </ul>
