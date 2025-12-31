@@ -31,6 +31,11 @@ export default function CPRTracker() {
   const [amiodaroneTotal, setAmiodaroneTotal] = useState(0);
   const [compressorChanges, setCompressorChanges] = useState(0);
   const [pulseChecks, setPulseChecks] = useState(0);
+  
+  // Track which medications are due
+  const [adrenalineDue, setAdrenalineDue] = useState(false);
+  const [amiodarone300Due, setAmiodarone300Due] = useState(false);
+  const [amiodarone150Due, setAmiodarone150Due] = useState(false);
 
   // Event tracking
   const [events, setEvents] = useState([]);
@@ -56,10 +61,21 @@ export default function CPRTracker() {
     setEvents(prev => [...prev, { type, message, timestamp, cprTime, cycle: currentCycle, ...extra }]);
   }, [totalSeconds, currentCycle, formatCPRTime]);
 
-  // Update banner events based on cycle
+  // Update banner events based on cycle and medication status
   useEffect(() => {
     const cycle = currentCycle;
     const cycleComplete = cycleSeconds >= CYCLE_DURATION - 5;
+    
+    // Check if medications should become due
+    if (cycle % 2 === 0 && cycleComplete && adrenalineCount < Math.floor(cycle / 2)) {
+      setAdrenalineDue(true);
+    }
+    if (cycle >= 3 && cycleComplete && amiodaroneTotal < 300) {
+      setAmiodarone300Due(true);
+    }
+    if (cycle >= 5 && cycleComplete && amiodaroneTotal >= 300 && amiodaroneTotal < 450) {
+      setAmiodarone150Due(true);
+    }
     
     const newBannerEvents = [
       {
@@ -78,7 +94,7 @@ export default function CPRTracker() {
         type: 'adrenaline',
         label: 'Adrenaline 1mg',
         timing: 'Every 2 cycles',
-        status: cycle % 2 === 0 && cycleComplete ? 'active' : 
+        status: adrenalineDue ? 'active' : 
                 (adrenalineCount >= Math.floor(cycle / 2) ? 'completed' : 'pending')
       },
       {
@@ -86,7 +102,7 @@ export default function CPRTracker() {
         label: 'Amiodarone 300mg',
         timing: 'After cycle 3',
         dose: 300,
-        status: cycle >= 3 && amiodaroneTotal < 300 ? (cycleComplete ? 'active' : 'pending') : 
+        status: amiodarone300Due ? 'active' : 
                 (amiodaroneTotal >= 300 ? 'completed' : 'pending')
       },
       {
@@ -94,13 +110,13 @@ export default function CPRTracker() {
         label: 'Amiodarone 150mg',
         timing: 'After cycle 5',
         dose: 150,
-        status: cycle >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450 ? (cycleComplete ? 'active' : 'pending') : 
+        status: amiodarone150Due ? 'active' : 
                 (amiodaroneTotal >= 450 ? 'completed' : 'pending')
       }
     ];
     
     setBannerEvents(newBannerEvents);
-  }, [currentCycle, cycleSeconds, adrenalineCount, amiodaroneTotal]);
+  }, [currentCycle, cycleSeconds, adrenalineCount, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due]);
 
   // Timer effect
   useEffect(() => {
@@ -150,6 +166,9 @@ export default function CPRTracker() {
     setPulseChecks(0);
     setEvents([]);
     setStartTime(null);
+    setAdrenalineDue(false);
+    setAmiodarone300Due(false);
+    setAmiodarone150Due(false);
   };
 
   const handleConfirmCompressorChange = () => {
@@ -168,11 +187,17 @@ export default function CPRTracker() {
 
   const handleConfirmAdrenaline = () => {
     setAdrenalineCount(prev => prev + 1);
+    setAdrenalineDue(false);
     addEvent('adrenaline', `Adrenaline 1mg administered (Dose #${adrenalineCount + 1})`, { dose: 1 });
   };
 
   const handleConfirmAmiodarone = (dose) => {
     setAmiodaroneTotal(prev => prev + dose);
+    if (dose === 300) {
+      setAmiodarone300Due(false);
+    } else if (dose === 150) {
+      setAmiodarone150Due(false);
+    }
     addEvent('amiodarone', `Amiodarone ${dose}mg administered`, { dose });
   };
 
@@ -237,7 +262,10 @@ export default function CPRTracker() {
 
     await base44.entities.CPRSession.create(sessionData);
     setShowEndDialog(false);
+    setOutcome('');
+    setNotes('');
     handleReset();
+    window.location.reload();
   };
 
   const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
@@ -386,6 +414,7 @@ export default function CPRTracker() {
                   <SelectItem value="deceased">Deceased</SelectItem>
                   <SelectItem value="ongoing">Ongoing - Transferred</SelectItem>
                   <SelectItem value="transferred">Transferred to another team</SelectItem>
+                  <SelectItem value="VA_ECMO">Transit to VA ECMO</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -404,7 +433,7 @@ export default function CPRTracker() {
               <Button 
                 variant="outline" 
                 onClick={() => setShowEndDialog(false)}
-                className="flex-1 border-slate-600"
+                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
               >
                 Cancel
               </Button>
