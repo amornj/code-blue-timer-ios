@@ -1,7 +1,7 @@
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Zap, Syringe } from 'lucide-react';
 
-export default function CycleTracker({ cycle, cycleSeconds }) {
+export default function CycleTracker({ cycle, cycleSeconds, shockCount, adrenalineCount, amiodaroneTotal }) {
   const progress = (cycleSeconds / 120) * 100;
   const remainingSeconds = 120 - cycleSeconds;
   
@@ -51,7 +51,34 @@ export default function CycleTracker({ cycle, cycleSeconds }) {
             ⚠️ PREPARE FOR CYCLE CHANGE
           </div>
         )}
-      </div>
-    </div>
-  );
-}
+        </div>
+
+        {/* Counter Stats */}
+        <div className="grid grid-cols-3 gap-2 mt-4">
+        <div className="bg-slate-700/50 rounded-lg p-2 text-center">
+          <Zap className="w-4 h-4 mx-auto mb-1 text-yellow-400" />
+          <div className="text-xl font-bold text-white">{shockCount}</div>
+          <div className="text-xs text-slate-400">Shocks</div>
+        </div>
+        <div className="bg-slate-700/50 rounded-lg p-2 text-center">
+          <Syringe className="w-4 h-4 mx-auto mb-1 text-red-400" />
+          <div className="text-xl font-bold text-white">{adrenalineCount}</div>
+          <div className="text-xs text-slate-400">Adrenaline</div>
+        </div>
+        <div className="bg-slate-700/50 rounded-lg p-2 text-center">
+          <IVBagIcon className="w-4 h-4 mx-auto mb-1 text-purple-400" />
+          <div className="text-xl font-bold text-white">{amiodaroneTotal}</div>
+          <div className="text-xs text-slate-400">Amiodarone</div>
+        </div>
+        </div>
+        </div>
+        );
+        }
+
+        function IVBagIcon({ className }) {
+        return (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v1.5M15 3v1.5M9 4.5h6M8 8h8v12a2 2 0 01-2 2h-4a2 2 0 01-2-2V8zM10 12h4M10 15h4" />
+        </svg>
+        );
+        }

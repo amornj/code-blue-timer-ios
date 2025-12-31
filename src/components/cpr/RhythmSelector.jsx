@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Activity, Zap, ZapOff } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Activity, Zap, ZapOff, AlertTriangle } from 'lucide-react';
 
 const SHOCKABLE_RHYTHMS = [
   { id: 'VF', label: 'VF', full: 'Ventricular Fibrillation' },
-  { id: 'pVT', label: 'pVT', full: 'Pulseless VT' }
+  { id: 'pVT', label: 'Pulseless VT', full: 'Pulseless VT' }
 ];
 
 const NON_SHOCKABLE_RHYTHMS = [
@@ -13,8 +14,17 @@ const NON_SHOCKABLE_RHYTHMS = [
   { id: 'Sinus', label: 'Sinus', full: 'Sinus Rhythm (ROSC?)' }
 ];
 
-export default function RhythmSelector({ currentRhythm, onRhythmChange }) {
+const ENERGY_OPTIONS = [120, 150, 200, 250, 300, 360];
+
+export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockDelivered, shockCount }) {
   const isShockable = SHOCKABLE_RHYTHMS.some(r => r.id === currentRhythm);
+  const [showShockDialog, setShowShockDialog] = useState(false);
+  const [selectedEnergy, setSelectedEnergy] = useState(200);
+
+  const handleShock = () => {
+    onShockDelivered(selectedEnergy);
+    setShowShockDialog(false);
+  };
 
   return (
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
@@ -86,7 +96,59 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange }) {
             <span className="text-slate-400">Select rhythm after pulse check</span>
           )}
         </div>
+
+        {/* Shock Button - Only shown when shockable rhythm selected */}
+        {isShockable && (
+          <Button
+            onClick={() => setShowShockDialog(true)}
+            className="w-full h-16 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white text-lg font-bold rounded-xl shadow-lg animate-pulse"
+          >
+            <Zap className="w-6 h-6 mr-2" />
+            DELIVER SHOCK ({shockCount} delivered)
+          </Button>
+        )}
       </div>
+
+      {/* Shock Dialog */}
+      <Dialog open={showShockDialog} onOpenChange={setShowShockDialog}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl text-yellow-400">
+              <AlertTriangle className="w-6 h-6" />
+              Confirm Defibrillation
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="text-slate-300 text-sm">Select energy level (Joules):</div>
+            
+            <div className="grid grid-cols-3 gap-2">
+              {ENERGY_OPTIONS.map((energy) => (
+                <Button
+                  key={energy}
+                  variant={selectedEnergy === energy ? "default" : "outline"}
+                  className={`h-14 text-lg font-bold ${
+                    selectedEnergy === energy 
+                      ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
+                      : 'border-slate-600 text-slate-300 hover:bg-slate-800'
+                  }`}
+                  onClick={() => setSelectedEnergy(energy)}
+                >
+                  {energy}J
+                </Button>
+              ))}
+            </div>
+
+            <Button
+              onClick={handleShock}
+              className="w-full h-16 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white text-xl font-bold mt-4"
+            >
+              <Zap className="w-6 h-6 mr-2" />
+              SHOCK DELIVERED @ {selectedEnergy}J
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

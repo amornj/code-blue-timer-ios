@@ -516,7 +516,13 @@ export default function CPRTracker() {
         {/* Timer and Cycle Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <CPRTimer seconds={totalSeconds} />
-          <CycleTracker cycle={currentCycle} cycleSeconds={cycleSeconds} />
+          <CycleTracker 
+            cycle={currentCycle} 
+            cycleSeconds={cycleSeconds}
+            shockCount={shockCount}
+            adrenalineCount={adrenalineCount}
+            amiodaroneTotal={amiodaroneTotal}
+          />
         </div>
 
         {/* Event Banners */}
@@ -528,37 +534,13 @@ export default function CPRTracker() {
           onConfirmAmiodarone={handleConfirmAmiodarone}
         />
 
-        {/* Rhythm and Shock Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RhythmSelector 
-            currentRhythm={currentRhythm} 
-            onRhythmChange={handleRhythmChange} 
-          />
-          
-          <div className="space-y-4">
-            <ShockButton 
-              isShockable={isShockable}
-              onShockDelivered={handleShockDelivered}
-              shockCount={shockCount}
-            />
-            
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
-                <div className="text-3xl font-bold text-red-400">{adrenalineCount}</div>
-                <div className="text-xs text-slate-400 mt-1">Adrenaline Doses</div>
-              </div>
-              <div className="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
-                <div className="text-3xl font-bold text-purple-400">{amiodaroneTotal}</div>
-                <div className="text-xs text-slate-400 mt-1">Amiodarone (mg)</div>
-              </div>
-              <div className="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
-                <div className="text-3xl font-bold text-yellow-400">{shockCount}</div>
-                <div className="text-xs text-slate-400 mt-1">Shocks</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Rhythm Selector */}
+        <RhythmSelector 
+          currentRhythm={currentRhythm} 
+          onRhythmChange={handleRhythmChange}
+          onShockDelivered={handleShockDelivered}
+          shockCount={shockCount}
+        />
 
         {/* LUCAS and Notes Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

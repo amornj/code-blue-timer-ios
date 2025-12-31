@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Heart, Activity, Syringe, Zap, Check, AlertTriangle } from 'lucide-react';
+import { Heart, Activity, Syringe, Check, AlertTriangle } from 'lucide-react';
 
 export default function EventBanner({ 
   events, 
@@ -14,7 +14,7 @@ export default function EventBanner({
       case 'compressor': return <RefreshIcon />;
       case 'pulse': return <Activity className="w-6 h-6" />;
       case 'adrenaline': return <Syringe className="w-6 h-6" />;
-      case 'amiodarone': return <Zap className="w-6 h-6" />;
+      case 'amiodarone': return <IVBagIcon className="w-6 h-6" />;
       default: return <AlertTriangle className="w-6 h-6" />;
     }
   };
@@ -93,6 +93,14 @@ function RefreshIcon() {
   return (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  );
+}
+
+function IVBagIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v1.5M15 3v1.5M9 4.5h6M8 8h8v12a2 2 0 01-2 2h-4a2 2 0 01-2-2V8zM10 12h4M10 15h4" />
     </svg>
   );
 }
