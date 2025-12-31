@@ -428,6 +428,13 @@ export default function CPRTracker() {
     `).join('')}
   </table>
 
+  ${doctorNotes ? `
+  <h2>📝 CPR Note</h2>
+  <div style="padding: 8px; background: #f9fafb; border-radius: 4px; font-size: 9px; border: 1px solid #e5e7eb;">
+    ${doctorNotes}
+  </div>
+  ` : ''}
+
   <p style="margin-top: 10px; color: #6b7280; font-size: 8px; text-align: center;">
     Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant
   </p>
