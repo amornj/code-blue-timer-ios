@@ -95,8 +95,8 @@ export default function EventBanner({
         >
           {/* LUCAS Toggle for Compressor */}
           {event.type === 'compressor' && (
-            <div className="absolute top-2 right-2 flex items-center gap-2 bg-black/30 rounded-lg px-2 py-1" style={{ width: '30%', minWidth: '80px' }}>
-              <span className="text-xs font-medium whitespace-nowrap">LUCAS</span>
+            <div className="absolute top-2 right-2 flex flex-col items-center gap-1 bg-black/30 rounded-lg px-2 py-2">
+              <span className="text-xs font-medium">LUCAS</span>
               <Switch
                 checked={lucasActive}
                 onCheckedChange={onToggleLucas}
