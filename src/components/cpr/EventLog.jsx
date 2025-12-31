@@ -10,6 +10,8 @@ export default function EventLog({ events }) {
       case 'rhythm': return <Activity className="w-4 h-4 text-blue-400" />;
       case 'adrenaline': return <Syringe className="w-4 h-4 text-red-400" />;
       case 'amiodarone': return <Syringe className="w-4 h-4 text-purple-400" />;
+      case 'lidocaine': return <Syringe className="w-4 h-4 text-teal-400" />;
+      case 'discretionary_med': return <Syringe className="w-4 h-4 text-indigo-400" />;
       case 'shock': return <Zap className="w-4 h-4 text-yellow-400" />;
       case 'pulse': return <Heart className="w-4 h-4 text-pink-400" />;
       case 'compressor': return <RefreshCw className="w-4 h-4 text-amber-400" />;
@@ -24,6 +26,8 @@ export default function EventLog({ events }) {
       case 'rhythm': return 'border-blue-600 bg-blue-900/20';
       case 'adrenaline': return 'border-red-600 bg-red-900/20';
       case 'amiodarone': return 'border-purple-600 bg-purple-900/20';
+      case 'lidocaine': return 'border-teal-600 bg-teal-900/20';
+      case 'discretionary_med': return 'border-indigo-600 bg-indigo-900/20';
       case 'shock': return 'border-yellow-600 bg-yellow-900/20';
       case 'pulse': return 'border-pink-600 bg-pink-900/20';
       case 'compressor': return 'border-amber-600 bg-amber-900/20';
