@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart, Activity, Syringe, Check, AlertTriangle } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
@@ -12,6 +12,28 @@ export default function EventBanner({
   onConfirmLidocaine,
   onAdrenalineFrequencyChange
 }) {
+  const activeEventRef = useRef(null);
+  const prevActiveIndexRef = useRef(null);
+
+  // Track active event changes and scroll to it
+  useEffect(() => {
+    const activeIndex = events.findIndex(e => e.status === 'active');
+    
+    if (activeIndex !== -1 && activeIndex !== prevActiveIndexRef.current) {
+      prevActiveIndexRef.current = activeIndex;
+      
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        if (activeEventRef.current) {
+          activeEventRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 100);
+    }
+  }, [events]);
+
   const getIcon = (type) => {
     switch (type) {
       case 'compressor': return <RefreshIcon />;
@@ -63,6 +85,7 @@ export default function EventBanner({
       {events.map((event, index) => (
         <div 
           key={index}
+          ref={event.status === 'active' ? activeEventRef : null}
           className={`rounded-xl p-4 border-2 transition-all duration-300 relative ${getColors(event.type, event.status)} ${
             event.status === 'active' ? 'animate-pulse shadow-lg' : ''
           }`}
