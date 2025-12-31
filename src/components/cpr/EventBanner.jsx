@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart, Activity, Syringe, Check, AlertTriangle } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 
 export default function EventBanner({ 
   events, 
@@ -10,7 +11,9 @@ export default function EventBanner({
   onConfirmAdrenaline,
   onConfirmAmiodarone,
   onConfirmLidocaine,
-  onAdrenalineFrequencyChange
+  onAdrenalineFrequencyChange,
+  lucasActive,
+  onToggleLucas
 }) {
   const activeEventRef = useRef(null);
   const prevActiveIndexRef = useRef(null);
@@ -90,6 +93,18 @@ export default function EventBanner({
             event.status === 'active' ? 'animate-pulse shadow-lg' : ''
           }`}
         >
+          {/* LUCAS Toggle for Compressor */}
+          {event.type === 'compressor' && (
+            <div className="absolute top-2 right-2 flex items-center gap-2 bg-black/30 rounded-lg px-2 py-1" style={{ width: '30%', minWidth: '80px' }}>
+              <span className="text-xs font-medium whitespace-nowrap">LUCAS</span>
+              <Switch
+                checked={lucasActive}
+                onCheckedChange={onToggleLucas}
+                className="data-[state=checked]:bg-amber-500"
+              />
+            </div>
+          )}
+          
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-center text-center gap-2 flex-1">
               <div className="p-2 rounded-full bg-black/20">

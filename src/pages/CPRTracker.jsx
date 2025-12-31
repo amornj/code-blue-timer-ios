@@ -707,38 +707,14 @@ export default function CPRTracker() {
           onConfirmAmiodarone={handleConfirmAmiodarone}
           onConfirmLidocaine={handleConfirmLidocaine}
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
+          lucasActive={lucasActive}
+          onToggleLucas={handleToggleLucas}
         />
 
-        {/* Discretionary Medication and LUCAS Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Discretionary Medication Section */}
+        <div className="grid grid-cols-1 gap-6">
           <DiscretionaryMedication onAddMedication={handleAddDiscretionaryMed} />
-
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-slate-300 font-semibold flex items-center gap-2">
-                  🤖 LUCAS Device
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">Mechanical chest compression</p>
-              </div>
-              <Button
-                onClick={handleToggleLucas}
-                className={`${
-                  lucasActive 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-slate-700 hover:bg-slate-600'
-                } text-white font-semibold px-6`}
-              >
-                {lucasActive ? '✓ LUCAS Active' : 'Start LUCAS'}
-              </Button>
-            </div>
-            {lucasActive && (
-              <div className="bg-green-900/30 border border-green-600 rounded-lg p-3 text-green-300 text-sm">
-                ✓ Mechanical compressions active - Manual compressor changes disabled
-              </div>
-            )}
-            </div>
-            </div>
+        </div>
 
             {/* Notes Section */}
             <div className="grid grid-cols-1 gap-6">
