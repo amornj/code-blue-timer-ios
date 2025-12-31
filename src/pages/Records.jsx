@@ -280,12 +280,21 @@ export default function Records() {
 </html>
     `;
     
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(report);
-    printWindow.document.close();
+    // Create hidden iframe for printing
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(report);
+    iframe.contentDocument.close();
+    
     setTimeout(() => {
-      printWindow.print();
-      setReportDialog(null);
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        setReportDialog(null);
+      }, 100);
     }, 250);
   };
 
@@ -382,32 +391,14 @@ export default function Records() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setViewingRecord(session)}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEdit(session)}
-                            className="text-slate-600 hover:text-slate-700 hover:bg-slate-50"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setReportDialog(session)}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setReportDialog(session)}
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
                       </td>
                     </tr>
                   ))
