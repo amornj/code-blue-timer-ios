@@ -50,7 +50,7 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockD
                     ? 'bg-red-600 hover:bg-red-700 border-red-500 text-white shadow-lg shadow-red-500/30' 
                     : 'border-red-800 text-red-400 hover:bg-red-900/50 hover:border-red-600'
                 }`}
-                onClick={() => onRhythmChange(rhythm.id)}
+                onClick={() => onRhythmChange(currentRhythm === rhythm.id ? null : rhythm.id)}
               >
                 {rhythm.label}
               </Button>
@@ -74,7 +74,7 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockD
                     ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
                     : 'border-blue-800 text-blue-400 hover:bg-blue-900/50 hover:border-blue-600'
                 }`}
-                onClick={() => onRhythmChange(rhythm.id)}
+                onClick={() => onRhythmChange(currentRhythm === rhythm.id ? null : rhythm.id)}
               >
                 {rhythm.label}
               </Button>
