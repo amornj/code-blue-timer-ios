@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Search, Download, Eye, Edit, FileText, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import JSZip from 'jszip';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function Records() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -180,7 +182,165 @@ export default function Records() {
     URL.revokeObjectURL(zipUrl);
   };
 
+  const formatDurationForPDF = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const exportSingleRecordPDF = (record) => {
+    const formatOutcome = (outcome) => {
+      switch (outcome) {
+        case 'ROSC': return 'ROSC';
+        case 'deceased': return 'Deceased';
+        case 'VA_ECMO': return 'VA ECMO';
+        case 'ongoing': return 'Ongoing';
+        case 'transferred': return 'Transferred';
+        default: return outcome || 'N/A';
+      }
+    };
+
+    const doc = new jsPDF();
+    let yPos = 20;
+
+    // Title
+    doc.setFontSize(18);
+    doc.setTextColor(30, 64, 175);
+    doc.text('CPR Session Report', 15, yPos);
+    yPos += 12;
+
+    // Patient Info
+    if (record.patient_name || record.hospital_number || record.hospital_name) {
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      if (record.patient_name) {
+        doc.text(`Patient: ${record.patient_name}`, 15, yPos);
+        yPos += 5;
+      }
+      if (record.hospital_number) {
+        doc.text(`HN: ${record.hospital_number}`, 15, yPos);
+        yPos += 5;
+      }
+      if (record.hospital_name) {
+        doc.text(`Hospital: ${record.hospital_name}`, 15, yPos);
+        yPos += 5;
+      }
+      yPos += 3;
+    }
+
+    // Summary
+    doc.setFontSize(10);
+    doc.text(`Start: ${format(new Date(record.start_time), 'MMM d, yyyy HH:mm')}`, 15, yPos);
+    doc.text(`Duration: ${formatDurationForPDF(record.total_duration_seconds || 0)}`, 70, yPos);
+    doc.text(`Cycles: ${record.total_cycles || 0}`, 125, yPos);
+    yPos += 6;
+    doc.text(`Outcome: ${formatOutcome(record.outcome)}`, 15, yPos);
+    yPos += 10;
+
+    doc.setFontSize(9);
+    doc.text(`Shocks: ${record.shocks_delivered?.length || 0} | Adrenaline: ${record.adrenaline_doses?.length || 0} | Amiodarone: ${record.amiodarone_doses?.reduce((sum, d) => sum + (d.dose_mg || 0), 0) || 0}mg | Compressor Changes: ${record.compressor_changes?.length || 0}`, 15, yPos);
+    yPos += 10;
+
+    // Medications
+    const allMeds = [
+      ...(record.adrenaline_doses || []).map(d => ({ ...d, med: 'Adrenaline', dose: d.dose_mg })),
+      ...(record.amiodarone_doses || []).map(d => ({ ...d, med: 'Amiodarone', dose: d.dose_mg }))
+    ].sort((a, b) => a.cycle - b.cycle);
+
+    if (allMeds.length > 0) {
+      doc.setFontSize(11);
+      doc.text('Medications', 15, yPos);
+      yPos += 5;
+      doc.autoTable({
+        startY: yPos,
+        head: [['Cycle', 'Medication', 'Dose', 'Time']],
+        body: allMeds.map(d => [
+          d.cycle,
+          d.med,
+          `${d.dose}mg`,
+          d.timestamp
+        ]),
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        margin: { left: 15 }
+      });
+      yPos = doc.lastAutoTable.finalY + 8;
+    }
+
+    // Defibrillation
+    if (record.shocks_delivered?.length > 0 && yPos < 250) {
+      doc.setFontSize(11);
+      doc.text('Defibrillation', 15, yPos);
+      yPos += 5;
+      doc.autoTable({
+        startY: yPos,
+        head: [['Shock #', 'Energy', 'Rhythm', 'Cycle']],
+        body: record.shocks_delivered.map(s => [
+          s.shock_number,
+          `${s.energy_joules}J`,
+          s.rhythm_before || 'N/A',
+          s.cycle
+        ]),
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        margin: { left: 15 }
+      });
+      yPos = doc.lastAutoTable.finalY + 8;
+    }
+
+    // Rhythm Changes
+    if (record.rhythm_history?.length > 0 && yPos < 250) {
+      doc.setFontSize(11);
+      doc.text('Rhythm Changes', 15, yPos);
+      yPos += 5;
+      doc.autoTable({
+        startY: yPos,
+        head: [['Cycle', 'Rhythm', 'Time']],
+        body: record.rhythm_history.map(r => [
+          r.cycle,
+          r.rhythm,
+          r.timestamp
+        ]),
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        margin: { left: 15 }
+      });
+      yPos = doc.lastAutoTable.finalY + 8;
+    }
+
+    // CPR Note
+    if (record.doctor_notes && yPos < 270) {
+      doc.setFontSize(11);
+      doc.text('CPR Note', 15, yPos);
+      yPos += 5;
+      doc.setFontSize(8);
+      const splitNotes = doc.splitTextToSize(record.doctor_notes, 180);
+      doc.text(splitNotes, 15, yPos);
+      yPos += splitNotes.length * 4 + 5;
+    }
+
+    // Post CPR Note
+    if (record.notes && yPos < 270) {
+      doc.setFontSize(11);
+      doc.text('Post CPR Note', 15, yPos);
+      yPos += 5;
+      doc.setFontSize(8);
+      const splitPostNotes = doc.splitTextToSize(record.notes, 180);
+      doc.text(splitPostNotes, 15, yPos);
+    }
+
+    // Footer
+    doc.setFontSize(7);
+    doc.setTextColor(107, 114, 128);
+    doc.text(`Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant`, 105, 285, { align: 'center' });
+
+    // Download
+    const fileName = `CPR_Record_${record.patient_name || 'Session'}_${format(new Date(record.start_time), 'yyyy-MM-dd')}.pdf`;
+    doc.save(fileName);
+    setReportDialog(null);
+  };
+
+  const oldExportSingleRecordPDF_HTML = (record) => {
     const formatOutcome = (outcome) => {
       switch (outcome) {
         case 'ROSC': return 'ROSC';
@@ -318,26 +478,9 @@ export default function Records() {
   <p style="margin-top: 10px; color: #6b7280; font-size: 8px; text-align: center;">
     Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant
   </p>
-</body>
-</html>
-    `;
-    
-    // Create hidden iframe for printing
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-    
-    iframe.contentDocument.open();
-    iframe.contentDocument.write(report);
-    iframe.contentDocument.close();
-    
-    setTimeout(() => {
-      iframe.contentWindow.print();
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-        setReportDialog(null);
-      }, 100);
-    }, 250);
+  </body>
+  </html>
+  `;
   };
 
   return (

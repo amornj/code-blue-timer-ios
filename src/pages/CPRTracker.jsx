@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Play, Square, AlertTriangle, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 import CPRTimer from '@/components/cpr/CPRTimer';
 import CycleTracker from '@/components/cpr/CycleTracker';
@@ -331,123 +333,124 @@ export default function CPRTracker() {
       ? formatOutcome(finalOutcome)
       : 'Ongoing - CPR in progress';
 
-    const report = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>CPR Session Report</title>
-  <style>
-    @page { size: A4; margin: 15mm; }
-    body { font-family: Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }
-    h1 { color: #1e40af; border-bottom: 2px solid #1e40af; padding-bottom: 5px; font-size: 18px; margin: 0 0 10px 0; }
-    h2 { color: #374151; font-size: 12px; margin: 10px 0 5px 0; }
-    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
-    .summary-box { background: #f3f4f6; padding: 8px; border-radius: 4px; }
-    .summary-box label { font-size: 9px; color: #6b7280; text-transform: uppercase; display: block; }
-    .summary-box value { font-size: 14px; font-weight: bold; display: block; margin-top: 2px; }
-    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9px; }
-    th, td { padding: 4px; text-align: left; border-bottom: 1px solid #e5e7eb; }
-    th { background: #f9fafb; font-weight: 600; }
-    .compact-table { font-size: 8px; }
-    .compact-table th, .compact-table td { padding: 2px 4px; }
-  </style>
-</head>
-<body>
-  <h1>🏥 CPR Session Report</h1>
-  
-  <div class="summary-grid">
-    <div class="summary-box">
-      <label>Start Time</label>
-      <value>${startTime || 'N/A'}</value>
-    </div>
-    <div class="summary-box">
-      <label>Duration</label>
-      <value>${formatTime(totalSeconds)}</value>
-    </div>
-    <div class="summary-box">
-      <label>Cycles</label>
-      <value>${currentCycle}</value>
-    </div>
-    <div class="summary-box">
-      <label>${sessionEnded && finalOutcome ? 'Outcome' : 'Current Rhythm'}</label>
-      <value>${sessionEnded && finalOutcome ? outcomeText : (currentRhythm || 'N/A')}</value>
-    </div>
-  </div>
+    const doc = new jsPDF();
+    let yPos = 20;
 
-  ${!sessionEnded || !finalOutcome ? `
-  <div style="margin: 8px 0; padding: 8px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px; color: #92400e; font-size: 10px;">
-    <strong>⚠️ CPR Effort Ongoing:</strong> This report was generated during an active CPR session. Final outcome has not been determined.
-  </div>
-  ` : ''}
+    // Title
+    doc.setFontSize(18);
+    doc.setTextColor(30, 64, 175);
+    doc.text('CPR Session Report', 15, yPos);
+    yPos += 12;
 
-  <h2>📊 Summary</h2>
-  <table class="compact-table">
-    <tr>
-      <td><strong>Shocks:</strong> ${shockCount}</td>
-      <td><strong>Adrenaline:</strong> ${adrenalineCount} doses</td>
-      <td><strong>Amiodarone:</strong> ${amiodaroneTotal} mg</td>
-      <td><strong>Compressor Changes:</strong> ${compressorChanges}</td>
-    </tr>
-  </table>
+    // Summary boxes
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Start: ${startTime || 'N/A'}`, 15, yPos);
+    doc.text(`Duration: ${formatTime(totalSeconds)}`, 70, yPos);
+    doc.text(`Cycles: ${currentCycle}`, 125, yPos);
+    yPos += 6;
+    doc.text(`${sessionEnded && finalOutcome ? 'Outcome' : 'Rhythm'}: ${outcomeText}`, 15, yPos);
+    yPos += 10;
 
-  <h2>💉 Medications</h2>
-  <table class="compact-table">
-    <tr><th>Time</th><th>Medication</th><th>Dose</th><th>Cycle</th></tr>
-    ${events.filter(e => e.type === 'adrenaline' || e.type === 'amiodarone').map(e => `
-      <tr>
-        <td>${e.cprTime}</td>
-        <td>${e.type === 'adrenaline' ? 'Adrenaline' : 'Amiodarone'}</td>
-        <td>${e.dose || '1'} mg</td>
-        <td>${e.cycle || 'N/A'}</td>
-      </tr>
-    `).join('') || '<tr><td colspan="4">None</td></tr>'}
-  </table>
+    // Warning if ongoing
+    if (!sessionEnded || !finalOutcome) {
+      doc.setFillColor(254, 243, 199);
+      doc.rect(15, yPos, 180, 10, 'F');
+      doc.setFontSize(9);
+      doc.text('Warning: CPR Effort Ongoing - Final outcome not determined', 20, yPos + 6);
+      yPos += 15;
+    }
 
-  <h2>⚡ Defibrillation</h2>
-  <table class="compact-table">
-    <tr><th>Time</th><th>Shock #</th><th>Energy</th><th>Rhythm</th></tr>
-    ${events.filter(e => e.type === 'shock').map((e, i) => `
-      <tr>
-        <td>${e.cprTime}</td>
-        <td>${i + 1}</td>
-        <td>${e.energy || 'N/A'}J</td>
-        <td>${e.rhythmBefore || 'N/A'}</td>
-      </tr>
-    `).join('') || '<tr><td colspan="4">None</td></tr>'}
-  </table>
+    // Summary
+    doc.setFontSize(11);
+    doc.text('Summary', 15, yPos);
+    yPos += 6;
+    doc.setFontSize(9);
+    doc.text(`Shocks: ${shockCount} | Adrenaline: ${adrenalineCount} | Amiodarone: ${amiodaroneTotal}mg | Compressor Changes: ${compressorChanges}`, 15, yPos);
+    yPos += 10;
 
-  <h2>📋 Event Log</h2>
-  <table class="compact-table">
-    <tr><th>Time</th><th>Event</th><th>Details</th></tr>
-    ${events.slice(0, 20).map(e => `
-      <tr>
-        <td>${e.cprTime}</td>
-        <td>${e.type.toUpperCase()}</td>
-        <td>${e.message}</td>
-      </tr>
-    `).join('')}
-  </table>
+    // Medications Table
+    const medEvents = events.filter(e => e.type === 'adrenaline' || e.type === 'amiodarone');
+    if (medEvents.length > 0) {
+      doc.setFontSize(11);
+      doc.text('Medications', 15, yPos);
+      yPos += 5;
+      doc.autoTable({
+        startY: yPos,
+        head: [['Time', 'Medication', 'Dose', 'Cycle']],
+        body: medEvents.map(e => [
+          e.cprTime,
+          e.type === 'adrenaline' ? 'Adrenaline' : 'Amiodarone',
+          `${e.dose || 1} mg`,
+          e.cycle || 'N/A'
+        ]),
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        margin: { left: 15 }
+      });
+      yPos = doc.lastAutoTable.finalY + 8;
+    }
 
-  ${doctorNotes ? `
-  <h2>📝 CPR Note</h2>
-  <div style="padding: 8px; background: #f9fafb; border-radius: 4px; font-size: 9px; border: 1px solid #e5e7eb;">
-    ${doctorNotes}
-  </div>
-  ` : ''}
+    // Defibrillation Table
+    const shockEvents = events.filter(e => e.type === 'shock');
+    if (shockEvents.length > 0 && yPos < 250) {
+      doc.setFontSize(11);
+      doc.text('Defibrillation', 15, yPos);
+      yPos += 5;
+      doc.autoTable({
+        startY: yPos,
+        head: [['Time', 'Shock #', 'Energy', 'Rhythm']],
+        body: shockEvents.map((e, i) => [
+          e.cprTime,
+          i + 1,
+          `${e.energy || 'N/A'}J`,
+          e.rhythmBefore || 'N/A'
+        ]),
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        margin: { left: 15 }
+      });
+      yPos = doc.lastAutoTable.finalY + 8;
+    }
 
-  <p style="margin-top: 10px; color: #6b7280; font-size: 8px; text-align: center;">
-    Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant
-  </p>
-</body>
-</html>
-    `;
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(report);
-    printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
+    // Event Log
+    if (events.length > 0 && yPos < 250) {
+      doc.setFontSize(11);
+      doc.text('Event Log (Recent)', 15, yPos);
+      yPos += 5;
+      doc.autoTable({
+        startY: yPos,
+        head: [['Time', 'Event', 'Details']],
+        body: events.slice(0, 15).map(e => [
+          e.cprTime,
+          e.type.toUpperCase(),
+          e.message
+        ]),
+        theme: 'striped',
+        styles: { fontSize: 7 },
+        margin: { left: 15 }
+      });
+      yPos = doc.lastAutoTable.finalY + 8;
+    }
+
+    // CPR Notes
+    if (doctorNotes && yPos < 270) {
+      doc.setFontSize(11);
+      doc.text('CPR Note', 15, yPos);
+      yPos += 5;
+      doc.setFontSize(8);
+      const splitNotes = doc.splitTextToSize(doctorNotes, 180);
+      doc.text(splitNotes, 15, yPos);
+    }
+
+    // Footer
+    doc.setFontSize(7);
+    doc.setTextColor(107, 114, 128);
+    doc.text(`Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant`, 105, 285, { align: 'center' });
+
+    // Download PDF
+    const fileName = `CPR_Session_${new Date().toISOString().slice(0, 10)}_${new Date().getTime()}.pdf`;
+    doc.save(fileName);
   };
 
   const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
