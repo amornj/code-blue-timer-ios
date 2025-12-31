@@ -320,9 +320,14 @@ export default function CPRTracker() {
 
     const formatOutcome = (outcome) => {
       switch (outcome) {
+        case 'ROSC_following': return 'ROSC, and following command';
+        case 'ROSC_not_following': return 'ROSC, not following command';
+        case 'death': return 'Death';
+        case 'VA_ECMO': return 'Transit to VA ECMO';
+        case 'transfer_ICU': return 'Transfer to ICU or other hospital';
+        // Legacy support
         case 'ROSC': return 'ROSC';
         case 'deceased': return 'Deceased';
-        case 'VA_ECMO': return 'VA ECMO';
         case 'ongoing': return 'Ongoing';
         case 'transferred': return 'Transferred';
         default: return outcome || 'N/A';
@@ -643,38 +648,38 @@ export default function CPRTracker() {
 
       {/* End Session Dialog */}
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
-        <DialogContent className="bg-slate-900 border-slate-700 text-white">
+        <DialogContent className="bg-slate-100 border-slate-300 text-slate-900">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-400" />
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
               End CPR Session
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm text-slate-400 mb-2 block">Outcome</label>
+              <label className="text-base font-medium text-slate-700 mb-3 block">Outcome</label>
               <Select value={outcome} onValueChange={setOutcome}>
-                <SelectTrigger className="bg-slate-800 border-slate-700">
+                <SelectTrigger className="bg-white border-slate-300 text-base h-12">
                   <SelectValue placeholder="Select outcome" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="ROSC">ROSC - Return of Spontaneous Circulation</SelectItem>
-                  <SelectItem value="deceased">Deceased</SelectItem>
-                  <SelectItem value="ongoing">Ongoing - Transferred</SelectItem>
-                  <SelectItem value="transferred">Transferred to another team</SelectItem>
-                  <SelectItem value="VA_ECMO">Transit to VA ECMO</SelectItem>
+                <SelectContent className="bg-white border-slate-300">
+                  <SelectItem value="ROSC_following" className="text-base py-3">ROSC, and following command</SelectItem>
+                  <SelectItem value="ROSC_not_following" className="text-base py-3">ROSC, not following command</SelectItem>
+                  <SelectItem value="death" className="text-base py-3">Death</SelectItem>
+                  <SelectItem value="VA_ECMO" className="text-base py-3">Transit to VA ECMO</SelectItem>
+                  <SelectItem value="transfer_ICU" className="text-base py-3">Transfer to ICU or other hospital</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
-              <label className="text-sm text-slate-400 mb-2 block">Notes</label>
+              <label className="text-base font-medium text-slate-700 mb-2 block">Notes</label>
               <Textarea 
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Additional notes about the session..."
-                className="bg-slate-800 border-slate-700 min-h-24"
+                className="bg-white border-slate-300 min-h-24"
               />
             </div>
 
@@ -682,13 +687,13 @@ export default function CPRTracker() {
               <Button 
                 variant="outline" 
                 onClick={() => setShowEndDialog(false)}
-                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
+                className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-200"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleEndSession}
-                className="flex-1 bg-red-600 hover:bg-red-700"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                 disabled={!outcome}
               >
                 {isAuthenticated ? 'End & Save Session' : 'End Session'}

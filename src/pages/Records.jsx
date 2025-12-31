@@ -108,18 +108,33 @@ export default function Records() {
 
   const getOutcomeColor = (outcome) => {
     switch (outcome) {
-      case 'ROSC': return 'bg-green-100 text-green-800 border-green-300';
-      case 'deceased': return 'bg-red-100 text-red-800 border-red-300';
-      case 'VA_ECMO': return 'bg-purple-100 text-purple-800 border-purple-300';
-      default: return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'ROSC_following':
+      case 'ROSC_not_following':
+      case 'ROSC': 
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'death':
+      case 'deceased': 
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'VA_ECMO': 
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'transfer_ICU':
+      case 'transferred':
+      case 'ongoing':
+      default: 
+        return 'bg-blue-100 text-blue-800 border-blue-300';
     }
   };
 
   const formatOutcome = (outcome) => {
     switch (outcome) {
+      case 'ROSC_following': return 'ROSC, and following command';
+      case 'ROSC_not_following': return 'ROSC, not following command';
+      case 'death': return 'Death';
+      case 'VA_ECMO': return 'Transit to VA ECMO';
+      case 'transfer_ICU': return 'Transfer to ICU or other hospital';
+      // Legacy support
       case 'ROSC': return 'ROSC';
       case 'deceased': return 'Deceased';
-      case 'VA_ECMO': return 'VA ECMO';
       case 'ongoing': return 'Ongoing';
       case 'transferred': return 'Transferred';
       default: return outcome;
@@ -191,9 +206,14 @@ export default function Records() {
   const exportSingleRecordPDF = (record) => {
     const formatOutcome = (outcome) => {
       switch (outcome) {
+        case 'ROSC_following': return 'ROSC, and following command';
+        case 'ROSC_not_following': return 'ROSC, not following command';
+        case 'death': return 'Death';
+        case 'VA_ECMO': return 'Transit to VA ECMO';
+        case 'transfer_ICU': return 'Transfer to ICU or other hospital';
+        // Legacy support
         case 'ROSC': return 'ROSC';
         case 'deceased': return 'Deceased';
-        case 'VA_ECMO': return 'VA ECMO';
         case 'ongoing': return 'Ongoing';
         case 'transferred': return 'Transferred';
         default: return outcome || 'N/A';
