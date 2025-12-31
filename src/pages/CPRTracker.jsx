@@ -97,13 +97,13 @@ export default function CPRTracker() {
   useEffect(() => {
     const cycle = currentCycle;
     const cycleComplete = cycleSeconds >= CYCLE_DURATION - 5;
+    const cyclesWithDefib = cyclesWithShocks.size;
     
     // Check adrenaline timing
     const isPEAorAsystole = currentRhythm === 'PEA' || currentRhythm === 'Asystole';
     const isFirstCycle = cycle === 1;
     const timeSinceLastAdrenaline = lastAdrenalineTime ? totalSeconds - lastAdrenalineTime : null;
     const adrenalineIntervalSeconds = adrenalineFrequency * 60; // Convert minutes to seconds
-    const cyclesWithDefib = cyclesWithShocks.size;
     
     // Adrenaline should be due if:
     // 1. First cycle AND rhythm is PEA/Asystole (immediate)
@@ -125,7 +125,6 @@ export default function CPRTracker() {
     // Amiodarone rules:
     // - If initial rhythm was non-shockable and still non-shockable → never show
     // - If in shockable rhythm → show based on CYCLES with defibrillation (not individual shocks)
-    const cyclesWithDefib = cyclesWithShocks.size;
     if (isShockable) {
       // After 3rd cycle with shock → 300mg
       if (cyclesWithDefib >= 3 && amiodaroneTotal < 300) {
