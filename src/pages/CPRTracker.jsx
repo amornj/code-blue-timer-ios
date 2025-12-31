@@ -127,16 +127,16 @@ export default function CPRTracker() {
     
     const newBannerEvents = [
       {
-        type: 'compressor',
-        label: lucasActive ? 'Resume Chest Compressor' : 'Change Compressor',
-        timing: 'Every cycle',
-        status: lucasActive ? 'pending' : (cycleComplete && compressorChanges < cycle ? 'active' : (compressorChanges >= cycle ? 'completed' : 'pending'))
-      },
-      {
         type: 'pulse',
         label: 'Pulse Check',
         timing: '< 10 seconds',
         status: cycleComplete && pulseChecks < cycle ? 'active' : (pulseChecks >= cycle ? 'completed' : 'pending')
+      },
+      {
+        type: 'compressor',
+        label: lucasActive ? 'Resume Chest Compressor' : 'Change Compressor',
+        timing: 'Every cycle',
+        status: lucasActive ? 'pending' : (cycleComplete && compressorChanges < cycle ? 'active' : (compressorChanges >= cycle ? 'completed' : 'pending'))
       },
       {
         type: 'adrenaline',
