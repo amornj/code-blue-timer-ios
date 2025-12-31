@@ -9,6 +9,7 @@ export default function EventBanner({
   onConfirmPulseCheck,
   onConfirmAdrenaline,
   onConfirmAmiodarone,
+  onConfirmLidocaine,
   onAdrenalineFrequencyChange
 }) {
   const getIcon = (type) => {
@@ -17,6 +18,7 @@ export default function EventBanner({
       case 'pulse': return <Activity className="w-6 h-6" />;
       case 'adrenaline': return <Syringe className="w-6 h-6" />;
       case 'amiodarone': return <IVBagIcon className="w-6 h-6" />;
+      case 'lidocaine': return <Syringe className="w-6 h-6" />;
       default: return <AlertTriangle className="w-6 h-6" />;
     }
   };
@@ -30,6 +32,7 @@ export default function EventBanner({
       case 'pulse': return 'bg-blue-900/50 border-blue-500 text-blue-300';
       case 'adrenaline': return 'bg-red-900/50 border-red-500 text-red-300';
       case 'amiodarone': return 'bg-purple-900/50 border-purple-500 text-purple-300';
+      case 'lidocaine': return 'bg-teal-900/50 border-teal-500 text-teal-300';
       default: return 'bg-slate-800 border-slate-600 text-slate-400';
     }
   };
@@ -40,6 +43,7 @@ export default function EventBanner({
       case 'pulse': return 'bg-blue-600 hover:bg-blue-700';
       case 'adrenaline': return 'bg-red-600 hover:bg-red-700';
       case 'amiodarone': return 'bg-purple-600 hover:bg-purple-700';
+      case 'lidocaine': return 'bg-teal-600 hover:bg-teal-700';
       default: return 'bg-slate-600 hover:bg-slate-700';
     }
   };
@@ -50,6 +54,7 @@ export default function EventBanner({
       case 'pulse': onConfirmPulseCheck(); break;
       case 'adrenaline': onConfirmAdrenaline(); break;
       case 'amiodarone': onConfirmAmiodarone(event.dose); break;
+      case 'lidocaine': onConfirmLidocaine(event.dose); break;
     }
   };
 

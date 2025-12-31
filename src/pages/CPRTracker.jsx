@@ -57,6 +57,12 @@ export default function CPRTracker() {
   const [amiodarone300Due, setAmiodarone300Due] = useState(false);
   const [amiodarone150Due, setAmiodarone150Due] = useState(false);
   
+  // Lidocaine tracking
+  const [lidocaineCumulativeDose, setLidocaineCumulativeDose] = useState(0); // in mg/kg
+  const [lastLidocaineTime, setLastLidocaineTime] = useState(null);
+  const [lidocaine1mgDue, setLidocaine1mgDue] = useState(false);
+  const [lidocaine05mgDue, setLidocaine05mgDue] = useState(false);
+  
   // LUCAS device and doctor notes
   const [lucasActive, setLucasActive] = useState(false);
   const [doctorNotes, setDoctorNotes] = useState('');
@@ -126,6 +132,19 @@ export default function CPRTracker() {
       }
     }
     
+    // Lidocaine rules - only if VF/pVT persists after amiodarone
+    if (isShockable && amiodaroneTotal >= 450 && lidocaineCumulativeDose < 3) {
+      // After 6th shock → 1 mg/kg
+      if (shocksInCurrentShockableRhythm >= 6 && lidocaineCumulativeDose === 0) {
+        setLidocaine1mgDue(true);
+      }
+      // Every ≥5 minutes → 0.5 mg/kg
+      const timeSinceLastLidocaine = lastLidocaineTime ? totalSeconds - lastLidocaineTime : null;
+      if (lidocaineCumulativeDose > 0 && timeSinceLastLidocaine !== null && timeSinceLastLidocaine >= 300) {
+        setLidocaine05mgDue(true);
+      }
+    }
+    
     // Determine adrenaline status
     let adrenalineStatus = 'pending';
     if (adrenalineDue) {
@@ -170,11 +189,25 @@ export default function CPRTracker() {
         timing: 'After 5th shock',
         dose: 150,
         status: amiodarone150Due ? 'active' : 'pending'
+      }] : []),
+      ...(isShockable && amiodaroneTotal >= 450 && lidocaineCumulativeDose < 1 ? [{
+        type: 'lidocaine',
+        label: 'Lidocaine 1 mg/kg',
+        timing: 'After 6th shock',
+        dose: 1,
+        status: lidocaine1mgDue ? 'active' : 'pending'
+      }] : []),
+      ...(isShockable && lidocaineCumulativeDose >= 1 && lidocaineCumulativeDose < 3 ? [{
+        type: 'lidocaine',
+        label: 'Lidocaine 0.5 mg/kg',
+        timing: 'Every ≥5 min',
+        dose: 0.5,
+        status: lidocaine05mgDue ? 'active' : 'pending'
       }] : [])
     ];
     
     setBannerEvents(newBannerEvents);
-  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, shocksInCurrentShockableRhythm, initialRhythm]);
+  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, shocksInCurrentShockableRhythm, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue]);
 
   // Timer effect
   useEffect(() => {
@@ -233,6 +266,10 @@ export default function CPRTracker() {
     setDoctorNotes('');
     setAdrenalineFrequency(4);
     setLastAdrenalineTime(null);
+    setLidocaineCumulativeDose(0);
+    setLastLidocaineTime(null);
+    setLidocaine1mgDue(false);
+    setLidocaine05mgDue(false);
   };
 
   const handleConfirmCompressorChange = () => {
@@ -285,6 +322,17 @@ export default function CPRTracker() {
       setAmiodarone150Due(false);
     }
     addEvent('amiodarone', `Amiodarone ${dose}mg administered`, { dose });
+  };
+
+  const handleConfirmLidocaine = (dose) => {
+    setLidocaineCumulativeDose(prev => prev + dose);
+    setLastLidocaineTime(totalSeconds);
+    if (dose === 1) {
+      setLidocaine1mgDue(false);
+    } else if (dose === 0.5) {
+      setLidocaine05mgDue(false);
+    }
+    addEvent('lidocaine', `Lidocaine ${dose} mg/kg administered (cumulative: ${lidocaineCumulativeDose + dose} mg/kg)`, { dose });
   };
 
   const handleRhythmChange = (rhythm) => {
@@ -356,6 +404,12 @@ export default function CPRTracker() {
       amiodarone_doses: events.filter(e => e.type === 'amiodarone').map((e, i) => ({
         dose_number: i + 1,
         dose_mg: e.dose,
+        cycle: e.cycle,
+        timestamp: e.timestamp
+      })),
+      lidocaine_doses: events.filter(e => e.type === 'lidocaine').map((e, i) => ({
+        dose_number: i + 1,
+        dose_mg_per_kg: e.dose,
         cycle: e.cycle,
         timestamp: e.timestamp
       })),
@@ -433,11 +487,11 @@ export default function CPRTracker() {
     doc.text('Summary', 15, yPos);
     yPos += 6;
     doc.setFontSize(9);
-    doc.text(`Shocks: ${shockCount} | Adrenaline: ${adrenalineCount} | Amiodarone: ${amiodaroneTotal}mg | Compressor Changes: ${compressorChanges}`, 15, yPos);
+    doc.text(`Shocks: ${shockCount} | Adrenaline: ${adrenalineCount} | Amiodarone: ${amiodaroneTotal}mg | Lidocaine: ${lidocaineCumulativeDose} mg/kg | Compressor Changes: ${compressorChanges}`, 15, yPos);
     yPos += 10;
 
     // Medications Table
-    const medEvents = events.filter(e => e.type === 'adrenaline' || e.type === 'amiodarone');
+    const medEvents = events.filter(e => e.type === 'adrenaline' || e.type === 'amiodarone' || e.type === 'lidocaine');
     if (medEvents.length > 0) {
       doc.setFontSize(11);
       doc.text('Medications', 15, yPos);
@@ -447,8 +501,8 @@ export default function CPRTracker() {
         head: [['Time', 'Medication', 'Dose', 'Cycle']],
         body: medEvents.map(e => [
           e.cprTime,
-          e.type === 'adrenaline' ? 'Adrenaline' : 'Amiodarone',
-          `${e.dose || 1} mg`,
+          e.type === 'adrenaline' ? 'Adrenaline' : e.type === 'amiodarone' ? 'Amiodarone' : 'Lidocaine',
+          e.type === 'lidocaine' ? `${e.dose} mg/kg` : `${e.dose || 1} mg`,
           e.cycle || 'N/A'
         ]),
         theme: 'striped',
@@ -599,6 +653,7 @@ export default function CPRTracker() {
             shockCount={shockCount}
             adrenalineCount={adrenalineCount}
             amiodaroneTotal={amiodaroneTotal}
+            lidocaineCumulativeDose={lidocaineCumulativeDose}
           />
         </div>
 
@@ -617,6 +672,7 @@ export default function CPRTracker() {
           onConfirmPulseCheck={handleConfirmPulseCheck}
           onConfirmAdrenaline={handleConfirmAdrenaline}
           onConfirmAmiodarone={handleConfirmAmiodarone}
+          onConfirmLidocaine={handleConfirmLidocaine}
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
         />
 

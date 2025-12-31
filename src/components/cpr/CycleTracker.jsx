@@ -1,7 +1,7 @@
 import React from 'react';
 import { RefreshCw, Zap, Syringe } from 'lucide-react';
 
-export default function CycleTracker({ cycle, cycleSeconds, shockCount, adrenalineCount, amiodaroneTotal }) {
+export default function CycleTracker({ cycle, cycleSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0 }) {
   const progress = (cycleSeconds / 120) * 100;
   const remainingSeconds = 120 - cycleSeconds;
   
@@ -54,7 +54,7 @@ export default function CycleTracker({ cycle, cycleSeconds, shockCount, adrenali
         </div>
 
         {/* Counter Stats */}
-        <div className="grid grid-cols-3 gap-2 mt-4">
+        <div className="grid grid-cols-4 gap-2 mt-4">
         <div className="bg-slate-700/50 rounded-lg p-2 text-center">
           <Zap className="w-4 h-4 mx-auto mb-1 text-yellow-400" />
           <div className="text-xl font-bold text-white">{shockCount}</div>
@@ -69,6 +69,11 @@ export default function CycleTracker({ cycle, cycleSeconds, shockCount, adrenali
           <IVBagIcon className="w-4 h-4 mx-auto mb-1 text-purple-400" />
           <div className="text-xl font-bold text-white">{amiodaroneTotal}</div>
           <div className="text-xs text-slate-400">Amiodarone</div>
+        </div>
+        <div className="bg-slate-700/50 rounded-lg p-2 text-center">
+          <Syringe className="w-4 h-4 mx-auto mb-1 text-teal-400" />
+          <div className="text-xl font-bold text-white">{lidocaineCumulativeDose}</div>
+          <div className="text-xs text-slate-400">Lidocaine</div>
         </div>
         </div>
         </div>
