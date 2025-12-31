@@ -99,9 +99,12 @@ export default function CPRTracker() {
     const cycleComplete = cycleSeconds >= CYCLE_DURATION - 5;
     const cyclesWithDefib = cyclesWithShocks.size;
     
-    // Check adrenaline timing
+    // Check rhythm types
+    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const isPEAorAsystole = currentRhythm === 'PEA' || currentRhythm === 'Asystole';
     const isFirstCycle = cycle === 1;
+    
+    // Check adrenaline timing
     const timeSinceLastAdrenaline = lastAdrenalineTime ? totalSeconds - lastAdrenalineTime : null;
     const adrenalineIntervalSeconds = adrenalineFrequency * 60; // Convert minutes to seconds
     
@@ -119,7 +122,6 @@ export default function CPRTracker() {
     }
     
     // Check amiodarone timing - only for shockable rhythms
-    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const initialWasNonShockable = initialRhythm === 'PEA' || initialRhythm === 'Asystole';
     
     // Amiodarone rules:
