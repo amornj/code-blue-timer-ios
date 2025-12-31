@@ -20,7 +20,7 @@ export default function Records() {
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [viewingRecord, setViewingRecord] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
-  const [editForm, setEditForm] = useState({ patient_name: '', hospital_number: '', hospital_name: '', notes: '' });
+  const [editForm, setEditForm] = useState({ patient_name: '', hospital_number: '', hospital_name: '', post_cpr_notes: '' });
   const [reportDialog, setReportDialog] = useState(null);
   const [deletingRecord, setDeletingRecord] = useState(null);
 
@@ -84,7 +84,7 @@ export default function Records() {
       patient_name: session.patient_name || '',
       hospital_number: session.hospital_number || '',
       hospital_name: session.hospital_name || '',
-      notes: session.notes || ''
+      post_cpr_notes: session.post_cpr_notes || ''
     });
   };
 
@@ -328,10 +328,10 @@ export default function Records() {
       yPos = doc.lastAutoTable.finalY + 8;
     }
 
-    // CPR Note
+    // Note1 - During CPR
     if (record.doctor_notes && yPos < 270) {
       doc.setFontSize(11);
-      doc.text('CPR Note', 15, yPos);
+      doc.text('Note1', 15, yPos);
       yPos += 5;
       doc.setFontSize(8);
       const splitNotes = doc.splitTextToSize(record.doctor_notes, 180);
@@ -339,14 +339,25 @@ export default function Records() {
       yPos += splitNotes.length * 4 + 5;
     }
 
-    // Post CPR Note
+    // Note2 - End session notes
     if (record.notes && yPos < 270) {
       doc.setFontSize(11);
-      doc.text('Post CPR Note', 15, yPos);
+      doc.text('Note2', 15, yPos);
       yPos += 5;
       doc.setFontSize(8);
-      const splitPostNotes = doc.splitTextToSize(record.notes, 180);
-      doc.text(splitPostNotes, 15, yPos);
+      const splitNote2 = doc.splitTextToSize(record.notes, 180);
+      doc.text(splitNote2, 15, yPos);
+      yPos += splitNote2.length * 4 + 5;
+    }
+
+    // Note3 - Post CPR notes
+    if (record.post_cpr_notes && yPos < 270) {
+      doc.setFontSize(11);
+      doc.text('Note3', 15, yPos);
+      yPos += 5;
+      doc.setFontSize(8);
+      const splitNote3 = doc.splitTextToSize(record.post_cpr_notes, 180);
+      doc.text(splitNote3, 15, yPos);
     }
 
     // Footer
@@ -824,17 +835,17 @@ export default function Records() {
               />
             </div>
             <div>
-              <Label>Notes (max 200 characters)</Label>
+              <Label>Post CPR Notes (max 200 characters)</Label>
               <Textarea
-                value={editForm.notes}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value.slice(0, 200) })}
-                placeholder="Add notes..."
+                value={editForm.post_cpr_notes}
+                onChange={(e) => setEditForm({ ...editForm, post_cpr_notes: e.target.value.slice(0, 200) })}
+                placeholder="Add additional post-CPR notes..."
                 maxLength={200}
                 className="resize-none"
                 rows={3}
               />
               <div className="text-xs text-slate-500 mt-1 text-right">
-                {editForm.notes.length}/200 characters
+                {editForm.post_cpr_notes.length}/200 characters
               </div>
             </div>
             <div className="flex gap-3 pt-4">

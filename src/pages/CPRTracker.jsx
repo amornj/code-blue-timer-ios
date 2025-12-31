@@ -438,14 +438,25 @@ export default function CPRTracker() {
       yPos = doc.lastAutoTable.finalY + 8;
     }
 
-    // CPR Notes
+    // Note1 - During CPR
     if (doctorNotes && yPos < 270) {
       doc.setFontSize(11);
-      doc.text('CPR Note', 15, yPos);
+      doc.text('Note1', 15, yPos);
       yPos += 5;
       doc.setFontSize(8);
       const splitNotes = doc.splitTextToSize(doctorNotes, 180);
       doc.text(splitNotes, 15, yPos);
+      yPos += splitNotes.length * 4 + 5;
+    }
+
+    // Note2 - End session notes
+    if (notes && yPos < 270) {
+      doc.setFontSize(11);
+      doc.text('Note2', 15, yPos);
+      yPos += 5;
+      doc.setFontSize(8);
+      const splitNote2 = doc.splitTextToSize(notes, 180);
+      doc.text(splitNote2, 15, yPos);
     }
 
     // Footer
