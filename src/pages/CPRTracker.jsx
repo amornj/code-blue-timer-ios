@@ -298,12 +298,17 @@ export default function CPRTracker() {
 
     if (isAuthenticated) {
       await base44.entities.CPRSession.create(sessionData);
+      setShowEndDialog(false);
+      setOutcome('');
+      setNotes('');
+      handleReset();
+      window.location.reload();
+    } else {
+      // Guest mode: just close dialog and keep data visible
+      setShowEndDialog(false);
+      setOutcome('');
+      setNotes('');
     }
-    setShowEndDialog(false);
-    setOutcome('');
-    setNotes('');
-    handleReset();
-    window.location.reload();
   };
 
   const exportGuestPDF = () => {
@@ -460,44 +465,33 @@ export default function CPRTracker() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-            {!isRunning ? (
+            {totalSeconds === 0 ? (
               <Button 
                 onClick={handleStart}
                 className="bg-green-600 hover:bg-green-700 text-white px-6 h-12 text-lg font-semibold"
               >
                 <Play className="w-5 h-5 mr-2" />
-                {totalSeconds === 0 ? 'Start CPR' : 'Resume'}
+                Start CPR
               </Button>
             ) : (
               <Button 
-                onClick={handlePause}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6 h-12 text-lg font-semibold"
+                onClick={() => setShowConfirmEnd(true)}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 h-12 text-lg font-semibold"
               >
                 <Square className="w-5 h-5 mr-2" />
-                Pause
+                End Session
               </Button>
             )}
 
-            {isAuthenticated ? (
-              <Button 
-                onClick={() => setShowConfirmEnd(true)}
-                variant="outline"
-                className="border-red-600 text-red-400 hover:bg-red-900/50 h-12"
-                disabled={totalSeconds === 0}
-              >
-                End Session
-              </Button>
-            ) : (
-              <Button 
-                onClick={exportGuestPDF}
-                variant="outline"
-                className="border-blue-600 text-blue-400 hover:bg-blue-900/50 h-12"
-                disabled={totalSeconds === 0}
-              >
-                <FileText className="w-5 h-5 mr-2" />
-                Export PDF
-              </Button>
-            )}
+            <Button 
+              onClick={exportGuestPDF}
+              variant="outline"
+              className="border-blue-600 text-blue-400 hover:bg-blue-900/50 h-12"
+              disabled={totalSeconds === 0}
+            >
+              <FileText className="w-5 h-5 mr-2" />
+              Export PDF
+            </Button>
           </div>
         </div>
       </div>
@@ -607,18 +601,14 @@ export default function CPRTracker() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-400" />
-              Confirm End Session
+              Confirm Stop CPR
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-4 text-amber-300 text-sm">
-              <p className="font-semibold mb-2">⚠️ Before ending this session:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Get the CPR session report in Records page</li>
-                <li>All data will be saved to the database</li>
-                <li>This action cannot be undone</li>
-              </ul>
+              <p className="font-semibold mb-2">⚠️ Are you sure you want to stop the CPR session?</p>
+              <p className="text-sm">You will need to enter the outcome of this session.</p>
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -636,7 +626,7 @@ export default function CPRTracker() {
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700"
               >
-                Continue
+                Confirm
               </Button>
             </div>
           </div>
@@ -693,7 +683,7 @@ export default function CPRTracker() {
                 className="flex-1 bg-red-600 hover:bg-red-700"
                 disabled={!outcome}
               >
-                End & Save Session
+                {isAuthenticated ? 'End & Save Session' : 'End Session'}
               </Button>
             </div>
           </div>
