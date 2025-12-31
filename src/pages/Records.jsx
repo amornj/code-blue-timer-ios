@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, Download, Eye, Edit, FileText } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Search, Download, Eye, Edit, FileText, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import JSZip from 'jszip';
 
@@ -17,8 +18,9 @@ export default function Records() {
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [viewingRecord, setViewingRecord] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
-  const [editForm, setEditForm] = useState({ patient_name: '', hospital_number: '', hospital_name: '' });
+  const [editForm, setEditForm] = useState({ patient_name: '', hospital_number: '', hospital_name: '', notes: '' });
   const [reportDialog, setReportDialog] = useState(null);
+  const [deletingRecord, setDeletingRecord] = useState(null);
 
   const { data: sessions, refetch } = useQuery({
     queryKey: ['cpr-sessions'],
@@ -79,13 +81,20 @@ export default function Records() {
     setEditForm({
       patient_name: session.patient_name || '',
       hospital_number: session.hospital_number || '',
-      hospital_name: session.hospital_name || ''
+      hospital_name: session.hospital_name || '',
+      notes: session.notes || ''
     });
   };
 
   const handleSaveEdit = async () => {
     await base44.entities.CPRSession.update(editingRecord.id, editForm);
     setEditingRecord(null);
+    refetch();
+  };
+
+  const handleDelete = async () => {
+    await base44.entities.CPRSession.delete(deletingRecord.id);
+    setDeletingRecord(null);
     refetch();
   };
 
@@ -293,8 +302,8 @@ export default function Records() {
   </table>
 
   ${record.notes ? `
-  <h2>📝 Notes</h2>
-  <div style="padding: 6px; background: #f9fafb; border-radius: 4px; font-size: 9px;">
+  <h2>📝 Additional Notes</h2>
+  <div style="padding: 8px; background: #f9fafb; border-radius: 4px; font-size: 9px; border: 1px solid #e5e7eb;">
     ${record.notes}
   </div>
   ` : ''}
@@ -373,7 +382,7 @@ export default function Records() {
                   <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Hospital</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Duration</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Outcome</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Report</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -417,14 +426,32 @@ export default function Records() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setReportDialog(session)}
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                        >
-                          <FileText className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setReportDialog(session)}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEdit(session)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeletingRecord(session)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -626,6 +653,20 @@ export default function Records() {
                 placeholder="Enter hospital name"
               />
             </div>
+            <div>
+              <Label>Notes (max 80 characters)</Label>
+              <Textarea
+                value={editForm.notes}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value.slice(0, 80) })}
+                placeholder="Add notes..."
+                maxLength={80}
+                className="resize-none"
+                rows={2}
+              />
+              <div className="text-xs text-slate-500 mt-1 text-right">
+                {editForm.notes.length}/80 characters
+              </div>
+            </div>
             <div className="flex gap-3 pt-4">
               <Button
                 variant="outline"
@@ -639,6 +680,42 @@ export default function Records() {
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
                 Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingRecord} onOpenChange={() => setDeletingRecord(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-slate-600">
+              Are you sure you want to delete this CPR session record? This action cannot be undone.
+            </p>
+            {deletingRecord && (
+              <div className="bg-slate-50 rounded-lg p-3 text-sm">
+                <div><strong>Date:</strong> {format(new Date(deletingRecord.start_time), 'MMM d, yyyy HH:mm')}</div>
+                <div><strong>Patient:</strong> {deletingRecord.patient_name || 'Not specified'}</div>
+                <div><strong>Duration:</strong> {formatDuration(deletingRecord.total_duration_seconds || 0)}</div>
+              </div>
+            )}
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setDeletingRecord(null)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDelete}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                Delete
               </Button>
             </div>
           </div>
