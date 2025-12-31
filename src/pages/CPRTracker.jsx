@@ -531,19 +531,7 @@ export default function CPRTracker() {
     doc.save(fileName);
   };
 
-  const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
 
-  const sessionSummary = {
-    startTime,
-    totalSeconds,
-    totalCycles: currentCycle,
-    currentRhythm,
-    shockCount,
-    adrenalineCount,
-    amiodaroneTotal,
-    compressorChanges,
-    pulseChecks
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-6">
