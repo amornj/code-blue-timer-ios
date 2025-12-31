@@ -43,6 +43,7 @@ export default function CPRTracker() {
   const [initialRhythm, setInitialRhythm] = useState(null);
   const [shockCount, setShockCount] = useState(0);
   const [shocksInCurrentShockableRhythm, setShocksInCurrentShockableRhythm] = useState(0);
+  const [cyclesWithShocks, setCyclesWithShocks] = useState(new Set()); // Track cycles where shocks were delivered
   const [adrenalineCount, setAdrenalineCount] = useState(0);
   const [amiodaroneTotal, setAmiodaroneTotal] = useState(0);
   const [compressorChanges, setCompressorChanges] = useState(0);
@@ -120,22 +121,23 @@ export default function CPRTracker() {
     
     // Amiodarone rules:
     // - If initial rhythm was non-shockable and still non-shockable → never show
-    // - If in shockable rhythm → show based on shock count in this shockable episode
+    // - If in shockable rhythm → show based on CYCLES with defibrillation (not individual shocks)
+    const cyclesWithDefib = cyclesWithShocks.size;
     if (isShockable) {
-      // After 3rd shock → 300mg
-      if (shocksInCurrentShockableRhythm >= 3 && amiodaroneTotal < 300) {
+      // After 3rd cycle with shock → 300mg
+      if (cyclesWithDefib >= 3 && amiodaroneTotal < 300) {
         setAmiodarone300Due(true);
       }
-      // After 5th shock → 150mg
-      if (shocksInCurrentShockableRhythm >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450) {
+      // After 5th cycle with shock → 150mg
+      if (cyclesWithDefib >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450) {
         setAmiodarone150Due(true);
       }
     }
     
     // Lidocaine rules - only if VF/pVT persists after amiodarone
     if (isShockable && amiodaroneTotal >= 450 && lidocaineCumulativeDose < 3) {
-      // After 6th shock → 1 mg/kg
-      if (shocksInCurrentShockableRhythm >= 6 && lidocaineCumulativeDose === 0) {
+      // After 6th cycle with shock → 1 mg/kg
+      if (cyclesWithDefib >= 6 && lidocaineCumulativeDose === 0) {
         setLidocaine1mgDue(true);
       }
       // Every ≥5 minutes → 0.5 mg/kg
@@ -207,7 +209,7 @@ export default function CPRTracker() {
     ];
     
     setBannerEvents(newBannerEvents);
-  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, shocksInCurrentShockableRhythm, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue]);
+  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks]);
 
   // Timer effect
   useEffect(() => {
@@ -253,6 +255,7 @@ export default function CPRTracker() {
     setInitialRhythm(null);
     setShockCount(0);
     setShocksInCurrentShockableRhythm(0);
+    setCyclesWithShocks(new Set());
     setAdrenalineCount(0);
     setAmiodaroneTotal(0);
     setCompressorChanges(0);
@@ -344,12 +347,13 @@ export default function CPRTracker() {
       setInitialRhythm(rhythm);
     }
     
-    // Reset shock counter when transitioning to shockable rhythm from non-shockable
+    // Reset shock counter and cycles with shocks when transitioning to shockable rhythm from non-shockable
     const prevWasNonShockable = !prevRhythm || prevRhythm === 'PEA' || prevRhythm === 'Asystole' || prevRhythm === 'Sinus';
     const nowIsShockable = rhythm === 'VF' || rhythm === 'pVT';
     
     if (prevWasNonShockable && nowIsShockable) {
       setShocksInCurrentShockableRhythm(0);
+      setCyclesWithShocks(new Set());
     }
     
     addEvent('rhythm', `Rhythm identified: ${rhythm}${prevRhythm ? ` (was ${prevRhythm})` : ''}`);
@@ -358,6 +362,10 @@ export default function CPRTracker() {
   const handleShockDelivered = (energy) => {
     setShockCount(prev => prev + 1);
     setShocksInCurrentShockableRhythm(prev => prev + 1);
+    
+    // Track that this cycle had a shock (for medication timing)
+    setCyclesWithShocks(prev => new Set([...prev, currentCycle]));
+    
     addEvent('shock', `Shock delivered @ ${energy}J (Shock #${shockCount + 1})`, { 
       energy, 
       rhythmBefore: currentRhythm 
