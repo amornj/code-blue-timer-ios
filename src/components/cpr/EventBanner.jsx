@@ -58,14 +58,38 @@ export default function EventBanner({
       {events.map((event, index) => (
         <div 
           key={index}
-          className={`rounded-xl p-4 border-2 transition-all duration-300 ${getColors(event.type, event.status)} ${
+          className={`rounded-xl p-4 border-2 transition-all duration-300 relative ${getColors(event.type, event.status)} ${
             event.status === 'active' ? 'animate-pulse shadow-lg' : ''
           }`}
         >
-          <div className="flex flex-col items-center text-center gap-2">
-            {/* Frequency slider for adrenaline - top right */}
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-center text-center gap-2 flex-1">
+              <div className="p-2 rounded-full bg-black/20">
+                {event.type === 'compressor' ? <Heart className="w-6 h-6" /> : getIcon(event.type)}
+              </div>
+              <div className="font-semibold text-sm">{event.label}</div>
+              <div className="text-xs opacity-75">{event.timing}</div>
+            
+              {event.status === 'active' && (
+                <Button 
+                  size="sm" 
+                  className={`mt-2 w-full ${getButtonColors(event.type)} text-white font-bold`}
+                  onClick={() => handleConfirm(event)}
+                >
+                  <Check className="w-4 h-4 mr-1" /> Confirm
+                </Button>
+              )}
+              
+              {event.status === 'completed' && (
+                <div className="flex items-center gap-1 text-green-400 text-xs font-medium">
+                  <Check className="w-4 h-4" /> Done
+                </div>
+              )}
+            </div>
+            
+            {/* Frequency selector for adrenaline - right side */}
             {event.type === 'adrenaline' && (
-              <div className="absolute top-2 right-2 flex gap-1">
+              <div className="flex flex-col gap-1">
                 {[3, 4, 5].map(freq => (
                   <button
                     key={freq}
@@ -79,28 +103,6 @@ export default function EventBanner({
                     {freq}
                   </button>
                 ))}
-              </div>
-            )}
-            
-            <div className="p-2 rounded-full bg-black/20">
-              {event.type === 'compressor' ? <Heart className="w-6 h-6" /> : getIcon(event.type)}
-            </div>
-            <div className="font-semibold text-sm">{event.label}</div>
-            <div className="text-xs opacity-75">{event.timing}</div>
-            
-            {event.status === 'active' && (
-              <Button 
-                size="sm" 
-                className={`mt-2 w-full ${getButtonColors(event.type)} text-white font-bold`}
-                onClick={() => handleConfirm(event)}
-              >
-                <Check className="w-4 h-4 mr-1" /> Confirm
-              </Button>
-            )}
-            
-            {event.status === 'completed' && (
-              <div className="flex items-center gap-1 text-green-400 text-xs font-medium">
-                <Check className="w-4 h-4" /> Done
               </div>
             )}
           </div>
