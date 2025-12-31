@@ -622,15 +622,6 @@ export default function CPRTracker() {
           shockCount={shockCount}
         />
 
-        {/* Non-Shockable Rhythm Alert */}
-        {currentRhythm && (currentRhythm === 'PEA' || currentRhythm === 'Asystole') && (
-          <div className="bg-blue-900/50 border-2 border-blue-500 rounded-xl p-4 text-center">
-            <div className="text-blue-300 font-bold text-lg">
-              ⚠️ Start CPR immediately
-            </div>
-          </div>
-        )}
-
         {/* Event Banners */}
         <EventBanner 
           events={bannerEvents}
