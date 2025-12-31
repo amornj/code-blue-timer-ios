@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Play, Square, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { base44 } from '@/api/base44Client';
 
 import CPRTimer from '@/components/cpr/CPRTimer';
@@ -36,6 +37,10 @@ export default function CPRTracker() {
   const [adrenalineDue, setAdrenalineDue] = useState(false);
   const [amiodarone300Due, setAmiodarone300Due] = useState(false);
   const [amiodarone150Due, setAmiodarone150Due] = useState(false);
+  
+  // LUCAS device and doctor notes
+  const [lucasActive, setLucasActive] = useState(false);
+  const [doctorNotes, setDoctorNotes] = useState('');
 
   // Event tracking
   const [events, setEvents] = useState([]);
@@ -83,9 +88,9 @@ export default function CPRTracker() {
     const newBannerEvents = [
       {
         type: 'compressor',
-        label: 'Change Compressor',
+        label: lucasActive ? 'Resume Chest Compressor' : 'Change Compressor',
         timing: 'Every cycle',
-        status: cycleComplete ? 'active' : 'pending'
+        status: lucasActive ? 'pending' : (cycleComplete ? 'active' : 'pending')
       },
       {
         type: 'pulse',
@@ -173,11 +178,28 @@ export default function CPRTracker() {
     setAdrenalineDue(false);
     setAmiodarone300Due(false);
     setAmiodarone150Due(false);
+    setLucasActive(false);
+    setDoctorNotes('');
   };
 
   const handleConfirmCompressorChange = () => {
     setCompressorChanges(prev => prev + 1);
-    addEvent('compressor', `Compressor changed (Cycle ${currentCycle})`);
+    if (lucasActive) {
+      setLucasActive(false);
+      addEvent('compressor', `Resumed manual chest compressions (Cycle ${currentCycle})`);
+    } else {
+      addEvent('compressor', `Compressor changed (Cycle ${currentCycle})`);
+    }
+  };
+
+  const handleToggleLucas = () => {
+    const newLucasState = !lucasActive;
+    setLucasActive(newLucasState);
+    if (newLucasState) {
+      addEvent('compressor', 'LUCAS mechanical CPR device activated');
+    } else {
+      addEvent('compressor', 'LUCAS device deactivated - returned to manual compressions');
+    }
   };
 
   const handleConfirmPulseCheck = () => {
@@ -359,6 +381,52 @@ export default function CPRTracker() {
           onConfirmAdrenaline={handleConfirmAdrenaline}
           onConfirmAmiodarone={handleConfirmAmiodarone}
         />
+
+        {/* LUCAS and Notes Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-slate-300 font-semibold flex items-center gap-2">
+                  🤖 LUCAS Device
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Mechanical chest compression</p>
+              </div>
+              <Button
+                onClick={handleToggleLucas}
+                className={`${
+                  lucasActive 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-slate-700 hover:bg-slate-600'
+                } text-white font-semibold px-6`}
+              >
+                {lucasActive ? '✓ LUCAS Active' : 'Start LUCAS'}
+              </Button>
+            </div>
+            {lucasActive && (
+              <div className="bg-green-900/30 border border-green-600 rounded-lg p-3 text-green-300 text-sm">
+                ✓ Mechanical compressions active - Manual compressor changes disabled
+              </div>
+            )}
+          </div>
+
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
+            <label className="text-slate-300 font-semibold mb-2 block">
+              📝 Doctor Notes
+            </label>
+            <textarea
+              value={doctorNotes}
+              onChange={(e) => setDoctorNotes(e.target.value.slice(0, 100))}
+              placeholder="Quick notes during CPR session (not included in report)..."
+              maxLength={100}
+              rows={4}
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <div className="text-xs text-slate-500 mt-1 text-right">
+              {doctorNotes.length}/100 characters
+            </div>
+          </div>
+        </div>
 
         {/* Rhythm and Shock Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

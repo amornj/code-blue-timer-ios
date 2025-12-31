@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Search, Download, Eye, Edit, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import JSZip from 'jszip';
 
 export default function Records() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,23 +127,20 @@ export default function Records() {
     const csv = exportToCSV(recordsToExport);
     const json = exportToJSON(recordsToExport);
 
-    // Create CSV blob
-    const csvBlob = new Blob([csv], { type: 'text/csv' });
-    const csvUrl = URL.createObjectURL(csvBlob);
-    const csvLink = document.createElement('a');
-    csvLink.href = csvUrl;
-    csvLink.download = `CPR_Sessions_${new Date().toISOString().slice(0, 10)}.csv`;
-    csvLink.click();
-    URL.revokeObjectURL(csvUrl);
+    // Create ZIP file
+    const zip = new JSZip();
+    const dateStr = new Date().toISOString().slice(0, 10);
+    
+    zip.file(`CPR_Sessions_${dateStr}.csv`, csv);
+    zip.file(`CPR_Sessions_${dateStr}.json`, json);
 
-    // Create JSON blob
-    const jsonBlob = new Blob([json], { type: 'application/json' });
-    const jsonUrl = URL.createObjectURL(jsonBlob);
-    const jsonLink = document.createElement('a');
-    jsonLink.href = jsonUrl;
-    jsonLink.download = `CPR_Sessions_${new Date().toISOString().slice(0, 10)}.json`;
-    jsonLink.click();
-    URL.revokeObjectURL(jsonUrl);
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipUrl = URL.createObjectURL(zipBlob);
+    const zipLink = document.createElement('a');
+    zipLink.href = zipUrl;
+    zipLink.download = `CPR_Sessions_${dateStr}.zip`;
+    zipLink.click();
+    URL.revokeObjectURL(zipUrl);
   };
 
   const exportSingleRecordPDF = (record) => {
@@ -337,7 +335,7 @@ export default function Records() {
                   <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Hospital</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Duration</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Outcome</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Actions</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Report</th>
                 </tr>
               </thead>
               <tbody>
