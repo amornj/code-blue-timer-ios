@@ -47,6 +47,7 @@ export default function CPRTracker() {
 
   // End session dialog
   const [showEndDialog, setShowEndDialog] = useState(false);
+  const [showConfirmEnd, setShowConfirmEnd] = useState(false);
   const [outcome, setOutcome] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -342,7 +343,7 @@ export default function CPRTracker() {
             )}
             
             <Button 
-              onClick={() => setShowEndDialog(true)}
+              onClick={() => setShowConfirmEnd(true)}
               variant="outline"
               className="border-red-600 text-red-400 hover:bg-red-900/50 h-12"
               disabled={totalSeconds === 0}
@@ -415,14 +416,14 @@ export default function CPRTracker() {
             </label>
             <textarea
               value={doctorNotes}
-              onChange={(e) => setDoctorNotes(e.target.value.slice(0, 100))}
+              onChange={(e) => setDoctorNotes(e.target.value.slice(0, 200))}
               placeholder="Quick notes during CPR session (not included in report)..."
-              maxLength={100}
+              maxLength={200}
               rows={4}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <div className="text-xs text-slate-500 mt-1 text-right">
-              {doctorNotes.length}/100 characters
+              {doctorNotes.length}/200 characters
             </div>
           </div>
         </div>
@@ -462,6 +463,48 @@ export default function CPRTracker() {
         {/* Event Log */}
         <EventLog events={events} />
       </div>
+
+      {/* Confirm End Session Dialog */}
+      <Dialog open={showConfirmEnd} onOpenChange={setShowConfirmEnd}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              Confirm End Session
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-4 text-amber-300 text-sm">
+              <p className="font-semibold mb-2">⚠️ Before ending this session:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Make sure you've exported the PDF report if needed</li>
+                <li>All data will be saved to the database</li>
+                <li>This action cannot be undone</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowConfirmEnd(false)}
+                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowConfirmEnd(false);
+                  setShowEndDialog(true);
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* End Session Dialog */}
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>

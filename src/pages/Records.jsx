@@ -143,6 +143,8 @@ export default function Records() {
     URL.revokeObjectURL(zipUrl);
   };
 
+  const [reportDialog, setReportDialog] = useState(null);
+
   const exportSingleRecordPDF = (record) => {
     const formatOutcome = (outcome) => {
       switch (outcome) {
@@ -283,6 +285,7 @@ export default function Records() {
     printWindow.document.close();
     setTimeout(() => {
       printWindow.print();
+      setReportDialog(null);
     }, 250);
   };
 
@@ -395,6 +398,14 @@ export default function Records() {
                             className="text-slate-600 hover:text-slate-700 hover:bg-slate-50"
                           >
                             <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setReportDialog(session)}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <FileText className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>
@@ -512,6 +523,56 @@ export default function Records() {
                   <p className="text-sm text-slate-700 bg-slate-50 rounded p-3">{viewingRecord.notes}</p>
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Report Dialog */}
+      <Dialog open={!!reportDialog} onOpenChange={() => setReportDialog(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>CPR Session Report</DialogTitle>
+          </DialogHeader>
+          {reportDialog && (
+            <div className="space-y-4 py-4">
+              <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Patient:</span>
+                  <span className="font-medium">{reportDialog.patient_name || 'Not specified'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Hospital Number:</span>
+                  <span className="font-medium">{reportDialog.hospital_number || 'Not specified'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Duration:</span>
+                  <span className="font-medium">{formatDuration(reportDialog.total_duration_seconds || 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Outcome:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getOutcomeColor(reportDialog.outcome)}`}>
+                    {formatOutcome(reportDialog.outcome)}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setReportDialog(null)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => exportSingleRecordPDF(reportDialog)}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export PDF
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
