@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FileText, Download, Printer } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 export default function PDFExport({ sessionData, events }) {
   const formatTime = (seconds) => {
@@ -17,70 +16,70 @@ export default function PDFExport({ sessionData, events }) {
 <head>
   <title>CPR Session Report</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-    h1 { color: #1e40af; border-bottom: 2px solid #1e40af; padding-bottom: 10px; }
-    h2 { color: #374151; margin-top: 30px; }
-    .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 20px 0; }
-    .summary-box { background: #f3f4f6; padding: 15px; border-radius: 8px; }
-    .summary-box label { font-size: 12px; color: #6b7280; text-transform: uppercase; }
-    .summary-box value { font-size: 24px; font-weight: bold; display: block; margin-top: 5px; }
-    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    @page { size: A4; margin: 15mm; }
+    body { font-family: Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }
+    h1 { color: #1e40af; border-bottom: 2px solid #1e40af; padding-bottom: 5px; font-size: 18px; margin: 0 0 10px 0; }
+    h2 { color: #374151; font-size: 12px; margin: 10px 0 5px 0; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+    .summary-box { background: #f3f4f6; padding: 8px; border-radius: 4px; }
+    .summary-box label { font-size: 9px; color: #6b7280; text-transform: uppercase; display: block; }
+    .summary-box value { font-size: 14px; font-weight: bold; display: block; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9px; }
+    th, td { padding: 4px; text-align: left; border-bottom: 1px solid #e5e7eb; }
     th { background: #f9fafb; font-weight: 600; }
-    .event-type { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-    .shock { background: #fef3c7; color: #92400e; }
-    .adrenaline { background: #fee2e2; color: #991b1b; }
-    .rhythm { background: #dbeafe; color: #1e40af; }
-    .cycle { background: #fef3c7; color: #92400e; }
-    @media print { body { padding: 20px; } }
+    .compact-table { font-size: 8px; }
+    .compact-table th, .compact-table td { padding: 2px 4px; }
+    @media print { 
+      body { padding: 0; }
+      h1 { page-break-after: avoid; }
+      h2 { page-break-after: avoid; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+    }
   </style>
 </head>
 <body>
   <h1>🏥 CPR Session Report</h1>
   
+  ${sessionData.patient_name || sessionData.hospital_number ? `
+  <div style="margin-bottom: 8px; padding: 6px; background: #f9fafb; border-radius: 4px;">
+    ${sessionData.patient_name ? `<strong>Patient:</strong> ${sessionData.patient_name} | ` : ''}
+    ${sessionData.hospital_number ? `<strong>HN:</strong> ${sessionData.hospital_number} | ` : ''}
+    ${sessionData.hospital_name ? `<strong>Hospital:</strong> ${sessionData.hospital_name}` : ''}
+  </div>
+  ` : ''}
+  
   <div class="summary-grid">
     <div class="summary-box">
-      <label>Session Start</label>
+      <label>Start Time</label>
       <value>${sessionData.startTime || 'N/A'}</value>
     </div>
     <div class="summary-box">
-      <label>Total Duration</label>
+      <label>Duration</label>
       <value>${formatTime(sessionData.totalSeconds || 0)}</value>
     </div>
     <div class="summary-box">
-      <label>Total Cycles</label>
+      <label>Cycles</label>
       <value>${sessionData.totalCycles || 0}</value>
     </div>
     <div class="summary-box">
-      <label>Final Rhythm</label>
-      <value>${sessionData.currentRhythm || 'N/A'}</value>
+      <label>Outcome</label>
+      <value>${formatOutcome(sessionData.outcome)}</value>
     </div>
   </div>
 
-  <h2>📊 Summary Statistics</h2>
-  <table>
-    <tr><th>Metric</th><th>Value</th></tr>
-    <tr><td>Total Shocks Delivered</td><td>${sessionData.shockCount || 0}</td></tr>
-    <tr><td>Adrenaline Doses</td><td>${sessionData.adrenalineCount || 0} mg total</td></tr>
-    <tr><td>Amiodarone Doses</td><td>${sessionData.amiodaroneTotal || 0} mg total</td></tr>
-    <tr><td>Compressor Changes</td><td>${sessionData.compressorChanges || 0}</td></tr>
-    <tr><td>Pulse Checks</td><td>${sessionData.pulseChecks || 0}</td></tr>
+  <h2>📊 Summary</h2>
+  <table class="compact-table">
+    <tr>
+      <td><strong>Shocks:</strong> ${sessionData.shockCount || 0}</td>
+      <td><strong>Adrenaline:</strong> ${sessionData.adrenalineCount || 0} doses</td>
+      <td><strong>Amiodarone:</strong> ${sessionData.amiodaroneTotal || 0} mg</td>
+      <td><strong>Compressor Changes:</strong> ${sessionData.compressorChanges || 0}</td>
+    </tr>
   </table>
 
-  <h2>📋 Complete Event Log</h2>
-  <table>
-    <tr><th>Time</th><th>Event</th><th>Details</th></tr>
-    ${events.map(e => `
-      <tr>
-        <td>${e.cprTime}</td>
-        <td><span class="event-type ${e.type}">${e.type.toUpperCase()}</span></td>
-        <td>${e.message}</td>
-      </tr>
-    `).join('')}
-  </table>
-
-  <h2>💉 Medication Administration</h2>
-  <table>
+  <h2>💉 Medications</h2>
+  <table class="compact-table">
     <tr><th>Time</th><th>Medication</th><th>Dose</th><th>Cycle</th></tr>
     ${events.filter(e => e.type === 'adrenaline' || e.type === 'amiodarone').map(e => `
       <tr>
@@ -89,12 +88,12 @@ export default function PDFExport({ sessionData, events }) {
         <td>${e.dose || '1'} mg</td>
         <td>${e.cycle || 'N/A'}</td>
       </tr>
-    `).join('') || '<tr><td colspan="4">No medications administered</td></tr>'}
+    `).join('') || '<tr><td colspan="4">None</td></tr>'}
   </table>
 
-  <h2>⚡ Defibrillation Record</h2>
-  <table>
-    <tr><th>Time</th><th>Shock #</th><th>Energy</th><th>Rhythm Before</th></tr>
+  <h2>⚡ Defibrillation</h2>
+  <table class="compact-table">
+    <tr><th>Time</th><th>Shock #</th><th>Energy</th><th>Rhythm</th></tr>
     ${events.filter(e => e.type === 'shock').map((e, i) => `
       <tr>
         <td>${e.cprTime}</td>
@@ -102,10 +101,29 @@ export default function PDFExport({ sessionData, events }) {
         <td>${e.energy || 'N/A'}J</td>
         <td>${e.rhythmBefore || 'N/A'}</td>
       </tr>
-    `).join('') || '<tr><td colspan="4">No shocks delivered</td></tr>'}
+    `).join('') || '<tr><td colspan="4">None</td></tr>'}
   </table>
 
-  <p style="margin-top: 40px; color: #6b7280; font-size: 12px;">
+  <h2>📋 Event Log</h2>
+  <table class="compact-table">
+    <tr><th>Time</th><th>Event</th><th>Details</th></tr>
+    ${events.slice(0, 15).map(e => `
+      <tr>
+        <td>${e.cprTime}</td>
+        <td>${e.type.toUpperCase()}</td>
+        <td>${e.message}</td>
+      </tr>
+    `).join('')}
+  </table>
+
+  ${sessionData.notes ? `
+  <h2>📝 Notes</h2>
+  <div style="padding: 6px; background: #f9fafb; border-radius: 4px; font-size: 9px;">
+    ${sessionData.notes}
+  </div>
+  ` : ''}
+
+  <p style="margin-top: 10px; color: #6b7280; font-size: 8px; text-align: center;">
     Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant
   </p>
 </body>
@@ -114,51 +132,34 @@ export default function PDFExport({ sessionData, events }) {
     return report;
   };
 
-  const handlePrint = () => {
+  const formatOutcome = (outcome) => {
+    switch (outcome) {
+      case 'ROSC': return 'ROSC';
+      case 'deceased': return 'Deceased';
+      case 'VA_ECMO': return 'VA ECMO';
+      case 'ongoing': return 'Ongoing';
+      case 'transferred': return 'Transferred';
+      default: return outcome || 'N/A';
+    }
+  };
+
+  const handleExportPDF = () => {
     const printWindow = window.open('', '_blank');
     printWindow.document.write(generateReport());
     printWindow.document.close();
-    printWindow.print();
-  };
-
-  const handleDownload = () => {
-    const blob = new Blob([generateReport()], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `CPR_Report_${new Date().toISOString().slice(0, 10)}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800">
-          <FileText className="w-4 h-4 mr-2" />
-          Export Report
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="bg-slate-900 border-slate-700 text-white">
-        <DialogHeader>
-          <DialogTitle>Export CPR Session Report</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <p className="text-slate-400 text-sm">
-            Export a complete report of this CPR session including all events, medications, and defibrillations.
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">
-              <Printer className="w-4 h-4 mr-2" />
-              Print Report
-            </Button>
-            <Button onClick={handleDownload} className="bg-green-600 hover:bg-green-700">
-              <Download className="w-4 h-4 mr-2" />
-              Download HTML
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <Button 
+      onClick={handleExportPDF}
+      variant="outline" 
+      className="border-slate-600 text-slate-300 hover:bg-slate-800"
+    >
+      <FileText className="w-4 h-4 mr-2" />
+      Export PDF
+    </Button>
   );
 }

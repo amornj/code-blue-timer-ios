@@ -77,6 +77,9 @@ export default function CPRTracker() {
       setAmiodarone150Due(true);
     }
     
+    // Calculate expected adrenaline count for current cycle
+    const expectedAdrenalineCount = Math.floor(cycle / 2);
+    
     const newBannerEvents = [
       {
         type: 'compressor',
@@ -95,7 +98,8 @@ export default function CPRTracker() {
         label: 'Adrenaline 1mg',
         timing: 'Every 2 cycles',
         status: adrenalineDue ? 'active' : 
-                (adrenalineCount >= Math.floor(cycle / 2) ? 'completed' : 'pending')
+                (cycle === 1 ? 'pending' : // Always pending on cycle 1
+                 adrenalineCount >= expectedAdrenalineCount ? 'completed' : 'pending')
       },
       {
         type: 'amiodarone',

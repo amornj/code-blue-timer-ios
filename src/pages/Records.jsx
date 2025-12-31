@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, Download, Eye, Edit, FileJson, FileSpreadsheet, Package } from 'lucide-react';
+import { Search, Download, Eye, Edit, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Records() {
@@ -145,6 +145,149 @@ export default function Records() {
     URL.revokeObjectURL(jsonUrl);
   };
 
+  const exportSingleRecordPDF = (record) => {
+    const formatOutcome = (outcome) => {
+      switch (outcome) {
+        case 'ROSC': return 'ROSC';
+        case 'deceased': return 'Deceased';
+        case 'VA_ECMO': return 'VA ECMO';
+        case 'ongoing': return 'Ongoing';
+        case 'transferred': return 'Transferred';
+        default: return outcome || 'N/A';
+      }
+    };
+
+    const report = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CPR Session Report</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }
+    h1 { color: #1e40af; border-bottom: 2px solid #1e40af; padding-bottom: 5px; font-size: 18px; margin: 0 0 10px 0; }
+    h2 { color: #374151; font-size: 12px; margin: 10px 0 5px 0; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+    .summary-box { background: #f3f4f6; padding: 8px; border-radius: 4px; }
+    .summary-box label { font-size: 9px; color: #6b7280; text-transform: uppercase; display: block; }
+    .summary-box value { font-size: 14px; font-weight: bold; display: block; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9px; }
+    th, td { padding: 4px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f9fafb; font-weight: 600; }
+    .compact-table { font-size: 8px; }
+    .compact-table th, .compact-table td { padding: 2px 4px; }
+    @media print { 
+      body { padding: 0; }
+      h1 { page-break-after: avoid; }
+      h2 { page-break-after: avoid; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🏥 CPR Session Report</h1>
+  
+  ${record.patient_name || record.hospital_number ? `
+  <div style="margin-bottom: 8px; padding: 6px; background: #f9fafb; border-radius: 4px;">
+    ${record.patient_name ? `<strong>Patient:</strong> ${record.patient_name} | ` : ''}
+    ${record.hospital_number ? `<strong>HN:</strong> ${record.hospital_number} | ` : ''}
+    ${record.hospital_name ? `<strong>Hospital:</strong> ${record.hospital_name}` : ''}
+  </div>
+  ` : ''}
+  
+  <div class="summary-grid">
+    <div class="summary-box">
+      <label>Start Time</label>
+      <value>${format(new Date(record.start_time), 'MMM d, yyyy HH:mm')}</value>
+    </div>
+    <div class="summary-box">
+      <label>Duration</label>
+      <value>${formatDuration(record.total_duration_seconds || 0)}</value>
+    </div>
+    <div class="summary-box">
+      <label>Cycles</label>
+      <value>${record.total_cycles || 0}</value>
+    </div>
+    <div class="summary-box">
+      <label>Outcome</label>
+      <value>${formatOutcome(record.outcome)}</value>
+    </div>
+  </div>
+
+  <h2>📊 Summary</h2>
+  <table class="compact-table">
+    <tr>
+      <td><strong>Shocks:</strong> ${record.shocks_delivered?.length || 0}</td>
+      <td><strong>Adrenaline:</strong> ${record.adrenaline_doses?.length || 0} doses</td>
+      <td><strong>Amiodarone:</strong> ${record.amiodarone_doses?.reduce((sum, d) => sum + (d.dose_mg || 0), 0) || 0} mg</td>
+      <td><strong>Compressor Changes:</strong> ${record.compressor_changes?.length || 0}</td>
+    </tr>
+  </table>
+
+  <h2>💉 Medications</h2>
+  <table class="compact-table">
+    <tr><th>Cycle</th><th>Medication</th><th>Dose</th><th>Time</th></tr>
+    ${[...(record.adrenaline_doses || []).map(d => ({ ...d, med: 'Adrenaline' })), 
+       ...(record.amiodarone_doses || []).map(d => ({ ...d, med: 'Amiodarone' }))]
+      .sort((a, b) => a.cycle - b.cycle)
+      .map(d => `
+        <tr>
+          <td>${d.cycle}</td>
+          <td>${d.med}</td>
+          <td>${d.dose_mg} mg</td>
+          <td>${d.timestamp}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="4">None</td></tr>'}
+  </table>
+
+  <h2>⚡ Defibrillation</h2>
+  <table class="compact-table">
+    <tr><th>Shock #</th><th>Energy</th><th>Rhythm</th><th>Cycle</th></tr>
+    ${(record.shocks_delivered || []).map(s => `
+      <tr>
+        <td>${s.shock_number}</td>
+        <td>${s.energy_joules}J</td>
+        <td>${s.rhythm_before || 'N/A'}</td>
+        <td>${s.cycle}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="4">None</td></tr>'}
+  </table>
+
+  <h2>🫀 Rhythm Changes</h2>
+  <table class="compact-table">
+    <tr><th>Cycle</th><th>Rhythm</th><th>Time</th></tr>
+    ${(record.rhythm_history || []).map(r => `
+      <tr>
+        <td>${r.cycle}</td>
+        <td>${r.rhythm}</td>
+        <td>${r.timestamp}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="3">None recorded</td></tr>'}
+  </table>
+
+  ${record.notes ? `
+  <h2>📝 Notes</h2>
+  <div style="padding: 6px; background: #f9fafb; border-radius: 4px; font-size: 9px;">
+    ${record.notes}
+  </div>
+  ` : ''}
+
+  <p style="margin-top: 10px; color: #6b7280; font-size: 8px; text-align: center;">
+    Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant
+  </p>
+</body>
+</html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(report);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
       <div className="max-w-7xl mx-auto">
@@ -270,7 +413,17 @@ export default function Records() {
       <Dialog open={!!viewingRecord} onOpenChange={() => setViewingRecord(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>CPR Session Details</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>CPR Session Details</span>
+              <Button
+                size="sm"
+                onClick={() => exportSingleRecordPDF(viewingRecord)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
+              </Button>
+            </DialogTitle>
           </DialogHeader>
           {viewingRecord && (
             <div className="space-y-6 py-4">
