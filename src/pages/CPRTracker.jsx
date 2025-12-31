@@ -137,8 +137,6 @@ export default function CPRTracker() {
       }
     }
     
-    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
-    
     const newBannerEvents = [
       {
         type: 'pulse',
