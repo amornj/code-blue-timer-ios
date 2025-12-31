@@ -103,12 +103,15 @@ export default function CPRTracker() {
     const isFirstCycle = cycle === 1;
     const timeSinceLastAdrenaline = lastAdrenalineTime ? totalSeconds - lastAdrenalineTime : null;
     const adrenalineIntervalSeconds = adrenalineFrequency * 60; // Convert minutes to seconds
+    const cyclesWithDefib = cyclesWithShocks.size;
     
     // Adrenaline should be due if:
-    // 1. First cycle AND rhythm is PEA/Asystole
-    // 2. Enough time has passed since last dose based on frequency
+    // 1. First cycle AND rhythm is PEA/Asystole (immediate)
+    // 2. After first defibrillation cycle for shockable rhythms
+    // 3. Enough time has passed since last dose based on frequency
     const shouldShowAdrenaline = 
       (isFirstCycle && isPEAorAsystole && adrenalineCount === 0) ||
+      (cyclesWithDefib >= 1 && adrenalineCount === 0 && isShockable) ||
       (timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds);
     
     if (shouldShowAdrenaline && !adrenalineDue) {
