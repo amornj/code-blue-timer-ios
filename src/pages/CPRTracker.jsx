@@ -349,15 +349,6 @@ export default function CPRTracker() {
             >
               End Session
             </Button>
-            
-            <Button 
-              onClick={handleReset}
-              variant="outline"
-              className="border-slate-600 text-slate-400 hover:bg-slate-800 h-12"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset
-            </Button>
           </div>
         </div>
       </div>
@@ -409,12 +400,12 @@ export default function CPRTracker() {
 
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
             <label className="text-slate-300 font-semibold mb-2 block">
-              📝 Doctor Notes
+              📝 Notes
             </label>
             <textarea
               value={doctorNotes}
               onChange={(e) => setDoctorNotes(e.target.value.slice(0, 200))}
-              placeholder="Quick notes during CPR session (not included in report)..."
+              placeholder="text"
               maxLength={200}
               rows={4}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
