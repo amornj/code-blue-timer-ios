@@ -16,7 +16,7 @@ const NON_SHOCKABLE_RHYTHMS = [
 
 const ENERGY_OPTIONS = [120, 150, 200, 250, 300, 360];
 
-export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockDelivered, shockCount }) {
+export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle }) {
   const isShockable = SHOCKABLE_RHYTHMS.some(r => r.id === currentRhythm);
   const [showShockDialog, setShowShockDialog] = useState(false);
   const [selectedEnergy, setSelectedEnergy] = useState(200);
@@ -50,7 +50,8 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockD
                     ? 'bg-red-600 hover:bg-red-700 border-red-500 text-white shadow-lg shadow-red-500/30' 
                     : 'border-red-800 text-red-400 hover:bg-red-900/50 hover:border-red-600'
                 }`}
-                onClick={() => onRhythmChange(currentRhythm === rhythm.id ? null : rhythm.id)}
+                onClick={() => !currentRhythm && onRhythmChange(rhythm.id)}
+                disabled={currentRhythm && currentRhythm !== rhythm.id}
               >
                 {rhythm.label}
               </Button>
@@ -74,7 +75,8 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockD
                     ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
                     : 'border-blue-800 text-blue-400 hover:bg-blue-900/50 hover:border-blue-600'
                 }`}
-                onClick={() => onRhythmChange(currentRhythm === rhythm.id ? null : rhythm.id)}
+                onClick={() => !currentRhythm && onRhythmChange(rhythm.id)}
+                disabled={currentRhythm && currentRhythm !== rhythm.id}
               >
                 {rhythm.label}
               </Button>
@@ -101,10 +103,17 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockD
         {isShockable && (
           <Button
             onClick={() => setShowShockDialog(true)}
-            className="w-full h-16 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white text-lg font-bold rounded-xl shadow-lg animate-pulse"
+            disabled={shockDeliveredThisCycle}
+            className={`w-full h-16 text-lg font-bold rounded-xl ${
+              shockDeliveredThisCycle
+                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-lg animate-pulse'
+            }`}
           >
             <Zap className="w-6 h-6 mr-2" />
-            DELIVER SHOCK ({shockCount} delivered)
+            {shockDeliveredThisCycle 
+              ? 'SHOCK ALREADY DELIVERED IN THIS CYCLE' 
+              : `DELIVER SHOCK (${shockCount} delivered)`}
           </Button>
         )}
 
