@@ -42,6 +42,7 @@ export default function CPRTracker() {
   // Clinical state
   const [currentRhythm, setCurrentRhythm] = useState(null);
   const [initialRhythm, setInitialRhythm] = useState(null);
+  const [rhythmSelectionStage, setRhythmSelectionStage] = useState('unselected'); // 'unselected' or 'selected'
   const [shockCount, setShockCount] = useState(0);
   const [shocksInCurrentShockableRhythm, setShocksInCurrentShockableRhythm] = useState(0);
   const [cyclesWithShocks, setCyclesWithShocks] = useState(new Set()); // Track cycles where shocks were delivered
@@ -326,6 +327,7 @@ export default function CPRTracker() {
     setCurrentCycle(1);
     setCurrentRhythm(null);
     setInitialRhythm(null);
+    setRhythmSelectionStage('unselected');
     setShockCount(0);
     setShocksInCurrentShockableRhythm(0);
     setCyclesWithShocks(new Set());
@@ -388,6 +390,7 @@ export default function CPRTracker() {
     setCurrentCycle(prev => prev + 1);
     setCycleSeconds(0);
     setShockDeliveredThisCycle(false); // Reset shock flag for new cycle
+    setRhythmSelectionStage('unselected'); // Allow rhythm selection for new cycle
     addEvent('cycle', `Cycle ${currentCycle + 1} started`);
   };
 
@@ -439,8 +442,11 @@ export default function CPRTracker() {
   };
 
   const handleRhythmChange = (rhythm) => {
+    if (rhythmSelectionStage === 'selected') return; // Cannot change if already selected
+    
     const prevRhythm = currentRhythm;
     setCurrentRhythm(rhythm);
+    setRhythmSelectionStage('selected'); // Lock rhythm selection
     
     // Track initial rhythm
     if (!initialRhythm) {
@@ -780,6 +786,7 @@ export default function CPRTracker() {
         {/* Rhythm Selector */}
         <RhythmSelector 
           currentRhythm={currentRhythm} 
+          rhythmSelectionStage={rhythmSelectionStage}
           onRhythmChange={handleRhythmChange}
           onShockDelivered={handleShockDelivered}
           shockCount={shockCount}

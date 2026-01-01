@@ -16,7 +16,7 @@ const NON_SHOCKABLE_RHYTHMS = [
 
 const ENERGY_OPTIONS = [120, 150, 200, 250, 300, 360];
 
-export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle }) {
+export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle }) {
   const isShockable = SHOCKABLE_RHYTHMS.some(r => r.id === currentRhythm);
   const [showShockDialog, setShowShockDialog] = useState(false);
   const [selectedEnergy, setSelectedEnergy] = useState(200);
@@ -28,9 +28,18 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockD
 
   return (
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
-      <div className="flex items-center gap-3 mb-4">
-        <Activity className="w-5 h-5 text-slate-400" />
-        <span className="text-slate-400 text-sm font-medium tracking-wide uppercase">Heart Rhythm</span>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Activity className="w-5 h-5 text-slate-400" />
+          <span className="text-slate-400 text-sm font-medium tracking-wide uppercase">Heart Rhythm</span>
+        </div>
+        <div className={`text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full ${
+          rhythmSelectionStage === 'unselected' 
+            ? 'bg-amber-900/50 text-amber-300 border border-amber-500' 
+            : 'bg-green-900/50 text-green-300 border border-green-500'
+        }`}>
+          {rhythmSelectionStage === 'unselected' ? 'Select Rhythm' : 'Rhythm Selected'}
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -50,8 +59,8 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockD
                     ? 'bg-red-600 hover:bg-red-700 border-red-500 text-white shadow-lg shadow-red-500/30' 
                     : 'border-red-800 text-red-400 hover:bg-red-900/50 hover:border-red-600'
                 }`}
-                onClick={() => !currentRhythm && onRhythmChange(rhythm.id)}
-                disabled={currentRhythm && currentRhythm !== rhythm.id}
+                onClick={() => rhythmSelectionStage === 'unselected' && onRhythmChange(rhythm.id)}
+                disabled={rhythmSelectionStage === 'selected' && currentRhythm !== rhythm.id}
               >
                 {rhythm.label}
               </Button>
@@ -75,8 +84,8 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockD
                     ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
                     : 'border-blue-800 text-blue-400 hover:bg-blue-900/50 hover:border-blue-600'
                 }`}
-                onClick={() => !currentRhythm && onRhythmChange(rhythm.id)}
-                disabled={currentRhythm && currentRhythm !== rhythm.id}
+                onClick={() => rhythmSelectionStage === 'unselected' && onRhythmChange(rhythm.id)}
+                disabled={rhythmSelectionStage === 'selected' && currentRhythm !== rhythm.id}
               >
                 {rhythm.label}
               </Button>
@@ -112,7 +121,7 @@ export default function RhythmSelector({ currentRhythm, onRhythmChange, onShockD
           >
             <Zap className="w-6 h-6 mr-2" />
             {shockDeliveredThisCycle 
-              ? 'SHOCK ALREADY DELIVERED IN THIS CYCLE' 
+              ? 'SHOCK DELIVERED' 
               : `DELIVER SHOCK (${shockCount} delivered)`}
           </Button>
         )}
