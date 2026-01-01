@@ -14,7 +14,7 @@ import EventBanner from '@/components/cpr/EventBanner';
 import RhythmSelector from '@/components/cpr/RhythmSelector';
 import ShockButton from '@/components/cpr/ShockButton';
 import EventLog from '@/components/cpr/EventLog';
-import DiscretionaryMedication from '@/components/cpr/DiscretionaryMedication';
+import CommonMedications from '@/components/cpr/CommonMedications';
 
 const CYCLE_DURATION = 120; // 2 minutes in seconds
 
@@ -806,13 +806,11 @@ export default function CPRTracker() {
           onToggleLucas={handleToggleLucas}
         />
 
+        {/* Common Medications */}
+        <CommonMedications onAddMedication={handleAddDiscretionaryMed} />
+
         {/* Event Log */}
         <EventLog events={events} />
-
-        {/* Discretionary Medication Section */}
-        <div className="grid grid-cols-1 gap-6">
-          <DiscretionaryMedication onAddMedication={handleAddDiscretionaryMed} />
-        </div>
 
             {/* Notes Section */}
             <div className="grid grid-cols-1 gap-6">
