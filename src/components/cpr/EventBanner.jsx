@@ -16,26 +16,6 @@ export default function EventBanner({
   onToggleLucas
 }) {
   const activeEventRef = useRef(null);
-  const prevActiveIndexRef = useRef(null);
-
-  // Track active event changes and scroll to it
-  useEffect(() => {
-    const activeIndex = events.findIndex(e => e.status === 'active');
-    
-    if (activeIndex !== -1 && activeIndex !== prevActiveIndexRef.current) {
-      prevActiveIndexRef.current = activeIndex;
-      
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        if (activeEventRef.current) {
-          activeEventRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
-        }
-      }, 100);
-    }
-  }, [events]);
 
   const getIcon = (type) => {
     switch (type) {

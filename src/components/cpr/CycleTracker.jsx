@@ -1,7 +1,7 @@
 import React from 'react';
-import { RefreshCw, Zap, Syringe } from 'lucide-react';
+import { RefreshCw, Zap, Syringe, Clock } from 'lucide-react';
 
-export default function CycleTracker({ cycle, cycleSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0 }) {
+export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0 }) {
   const progress = (cycleSeconds / 120) * 100;
   const remainingSeconds = 120 - cycleSeconds;
   
@@ -19,7 +19,21 @@ export default function CycleTracker({ cycle, cycleSeconds, shockCount, adrenali
         ? 'bg-gradient-to-br from-amber-900/50 to-amber-950 border-amber-500 animate-pulse' 
         : 'bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700'
     }`}>
-      <div className="flex items-center justify-between mb-4">
+      {/* Total CPR Time */}
+      <div className="mb-6 text-center">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Clock className="w-5 h-5 text-slate-400" />
+          <span className="text-sm font-medium tracking-wide uppercase text-slate-400">
+            Total CPR Time
+          </span>
+        </div>
+        <div className="text-5xl font-bold text-white font-mono">
+          {formatTime(totalSeconds)}
+        </div>
+      </div>
+
+      {/* Cycle Info */}
+      <div className="flex items-center justify-between mb-4 pt-4 border-t border-slate-700">
         <div className="flex items-center gap-3">
           <RefreshCw className={`w-5 h-5 ${isUrgent ? 'text-amber-400' : 'text-slate-400'}`} />
           <span className={`text-sm font-medium tracking-wide uppercase ${isUrgent ? 'text-amber-400' : 'text-slate-400'}`}>

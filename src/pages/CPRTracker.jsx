@@ -45,6 +45,7 @@ export default function CPRTracker() {
   const [shockCount, setShockCount] = useState(0);
   const [shocksInCurrentShockableRhythm, setShocksInCurrentShockableRhythm] = useState(0);
   const [cyclesWithShocks, setCyclesWithShocks] = useState(new Set()); // Track cycles where shocks were delivered
+  const [shockDeliveredThisCycle, setShockDeliveredThisCycle] = useState(false);
   const [adrenalineCount, setAdrenalineCount] = useState(0);
   const [amiodaroneTotal, setAmiodaroneTotal] = useState(0);
   const [compressorChanges, setCompressorChanges] = useState(0);
@@ -280,6 +281,7 @@ export default function CPRTracker() {
     setLidocaine1mgDue(false);
     setLidocaine05mgDue(false);
     setDiscretionaryMeds([]);
+    setShockDeliveredThisCycle(false);
   };
 
   const handleConfirmCompressorChange = () => {
@@ -310,6 +312,7 @@ export default function CPRTracker() {
     // Move to next cycle only after pulse check
     setCurrentCycle(prev => prev + 1);
     setCycleSeconds(0);
+    setShockDeliveredThisCycle(false); // Reset shock flag for new cycle
     addEvent('cycle', `Cycle ${currentCycle + 1} started`);
   };
 
@@ -384,6 +387,7 @@ export default function CPRTracker() {
     
     // Track that this cycle had a shock (for medication timing)
     setCyclesWithShocks(prev => new Set([...prev, currentCycle]));
+    setShockDeliveredThisCycle(true);
     
     addEvent('shock', `Shock delivered @ ${energy}J (Shock #${shockCount + 1})`, { 
       energy, 
@@ -678,17 +682,15 @@ export default function CPRTracker() {
       {/* Main Content */}
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Timer and Cycle Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <CPRTimer seconds={totalSeconds} />
-          <CycleTracker 
-            cycle={currentCycle} 
-            cycleSeconds={cycleSeconds}
-            shockCount={shockCount}
-            adrenalineCount={adrenalineCount}
-            amiodaroneTotal={amiodaroneTotal}
-            lidocaineCumulativeDose={lidocaineCumulativeDose}
-          />
-        </div>
+        <CycleTracker 
+          cycle={currentCycle} 
+          cycleSeconds={cycleSeconds}
+          totalSeconds={totalSeconds}
+          shockCount={shockCount}
+          adrenalineCount={adrenalineCount}
+          amiodaroneTotal={amiodaroneTotal}
+          lidocaineCumulativeDose={lidocaineCumulativeDose}
+        />
 
         {/* Rhythm Selector */}
         <RhythmSelector 
@@ -696,6 +698,7 @@ export default function CPRTracker() {
           onRhythmChange={handleRhythmChange}
           onShockDelivered={handleShockDelivered}
           shockCount={shockCount}
+          shockDeliveredThisCycle={shockDeliveredThisCycle}
         />
 
         {/* Event Banners */}
