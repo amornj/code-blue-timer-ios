@@ -15,7 +15,18 @@ export default function EventBanner({
   lucasActive,
   onToggleLucas
 }) {
-  const activeEventRef = useRef(null);
+  const adrenalineRef = useRef(null);
+
+  // Autoscroll to adrenaline banner when any alarm becomes active
+  useEffect(() => {
+    const hasActiveAlarm = events.some(e => e.status === 'active');
+    if (hasActiveAlarm && adrenalineRef.current) {
+      adrenalineRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }, [events]);
 
   const getIcon = (type) => {
     switch (type) {
@@ -68,7 +79,7 @@ export default function EventBanner({
       {events.map((event, index) => (
         <div 
           key={index}
-          ref={event.status === 'active' ? activeEventRef : null}
+          ref={event.type === 'adrenaline' ? adrenalineRef : null}
           className={`rounded-xl p-4 border-2 transition-all duration-300 relative ${getColors(event.type, event.status)} ${
             event.status === 'active' ? 'animate-pulse shadow-lg' : ''
           }`}
