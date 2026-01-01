@@ -112,12 +112,12 @@ export default function CPRTracker() {
     const timeSinceLastAdrenaline = lastAdrenalineTime ? totalSeconds - lastAdrenalineTime : null;
     const adrenalineIntervalSeconds = adrenalineFrequency * 60; // Convert minutes to seconds
     
-    // Adrenaline should be due if:
-    // 1. First cycle AND rhythm is PEA/Asystole (immediate)
-    // 2. Enough time has passed since last dose based on frequency (3-5 minutes)
-    const shouldShowAdrenaline = 
-      (isFirstCycle && isPEAorAsystole && adrenalineCount === 0) ||
-      (timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds);
+    // Adrenaline rules:
+    // - VF/pVT: First dose at 4th minute (240s), then every 3-5 minutes based on frequency
+    // - PEA/Asystole: First dose at 1st minute (60s), then every 3-5 minutes based on frequency
+    const shouldShowAdrenaline = adrenalineCount === 0 
+      ? (isPEAorAsystole ? totalSeconds >= 60 : isShockable ? totalSeconds >= 240 : false)
+      : (timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds);
     
     if (shouldShowAdrenaline && !adrenalineDue) {
       setAdrenalineDue(true);
