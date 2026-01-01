@@ -34,7 +34,7 @@ const COMMON_MEDICATIONS = [
   }
 ];
 
-export default function CommonMedications({ onAddMedication }) {
+export default function CommonMedications({ onAddMedication, medicationCounts = {} }) {
   const handleMedClick = (med) => {
     onAddMedication({
       medication: med.full,
@@ -49,15 +49,23 @@ export default function CommonMedications({ onAddMedication }) {
       </div>
       
       <div className="grid grid-cols-3 gap-3">
-        {COMMON_MEDICATIONS.map((med) => (
-          <Button
-            key={med.short}
-            onClick={() => handleMedClick(med)}
-            className={`h-14 text-base font-bold ${med.color} text-white`}
-          >
-            {med.short}
-          </Button>
-        ))}
+        {COMMON_MEDICATIONS.map((med) => {
+          const count = medicationCounts[med.short] || 0;
+          return (
+            <Button
+              key={med.short}
+              onClick={() => handleMedClick(med)}
+              className={`h-14 text-base font-bold ${med.color} text-white relative`}
+            >
+              {med.short}
+              {count > 0 && (
+                <span className="absolute -top-2 -right-2 bg-white text-slate-900 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg">
+                  {count}
+                </span>
+              )}
+            </Button>
+          );
+        })}
       </div>
     </div>
   );
