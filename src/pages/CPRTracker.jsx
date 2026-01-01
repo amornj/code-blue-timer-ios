@@ -558,7 +558,6 @@ export default function CPRTracker() {
         case 'death': return 'Death';
         case 'VA_ECMO': return 'Transit to VA ECMO';
         case 'transfer_ICU': return 'Transfer to ICU or other hospital';
-        // Legacy support
         case 'ROSC': return 'ROSC';
         case 'deceased': return 'Deceased';
         case 'ongoing': return 'Ongoing';
@@ -607,79 +606,73 @@ export default function CPRTracker() {
     doc.text(`Shocks: ${shockCount} | Adrenaline: ${adrenalineCount} | Amiodarone: ${amiodaroneTotal}mg | Lidocaine: ${lidocaineCumulativeDose} mg/kg | Compressor Changes: ${compressorChanges}`, 15, yPos);
     yPos += 10;
 
-    // Medications Table
-    const medEvents = events.filter(e => e.type === 'adrenaline' || e.type === 'amiodarone' || e.type === 'lidocaine' || e.type === 'discretionary_med');
-    if (medEvents.length > 0) {
+    // Single Event Log Table
+    const formatEventForPDF = (e) => {
+      let description = '';
+      
+      switch (e.type) {
+        case 'start':
+          description = 'CPR Session Started';
+          break;
+        case 'rhythm':
+          description = e.message;
+          break;
+        case 'shock':
+          description = `Shock Delivered @ ${e.energy}J (Rhythm: ${e.rhythmBefore})`;
+          break;
+        case 'compressor':
+          description = e.message;
+          break;
+        case 'pulse':
+          description = 'Pulse Check Performed';
+          break;
+        case 'adrenaline':
+          description = `Adrenaline 1mg IV`;
+          break;
+        case 'amiodarone':
+          description = `Amiodarone ${e.dose}mg IV`;
+          break;
+        case 'lidocaine':
+          description = `Xylocaine ${e.dose} mg/kg IV`;
+          break;
+        case 'discretionary_med':
+          description = e.medication || e.dosage || 'Medication Administered';
+          break;
+        case 'cycle':
+          description = e.message;
+          break;
+        default:
+          description = e.message;
+      }
+      
+      return [e.timestamp, description, `Cycle ${e.cycle || '-'}`];
+    };
+
+    if (events.length > 0) {
       doc.setFontSize(11);
-      doc.text('Medications', 15, yPos);
+      doc.text('Event Log', 15, yPos);
       yPos += 5;
+      
       doc.autoTable({
         startY: yPos,
-        head: [['Time', 'Medication', 'Dose', 'Cycle']],
-        body: medEvents.map(e => [
-          e.cprTime,
-          e.type === 'adrenaline' ? 'Adrenaline' : 
-          e.type === 'amiodarone' ? 'Amiodarone' : 
-          e.type === 'lidocaine' ? 'Lidocaine' : 
-          e.medication || 'Other',
-          e.type === 'lidocaine' ? `${e.dose} mg/kg` : 
-          e.type === 'discretionary_med' ? e.dosage :
-          `${e.dose || 1} mg`,
-          e.cycle || 'N/A'
-        ]),
+        head: [['Time', 'Event', 'Cycle']],
+        body: events.map(formatEventForPDF),
         theme: 'striped',
         styles: { fontSize: 8 },
-        margin: { left: 15 }
+        margin: { left: 15 },
+        headStyles: { fillColor: [30, 64, 175] }
       });
       yPos = doc.lastAutoTable.finalY + 8;
     }
 
-    // Defibrillation Table
-    const shockEvents = events.filter(e => e.type === 'shock');
-    if (shockEvents.length > 0 && yPos < 250) {
+    // Notes section
+    if (doctorNotes) {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
       doc.setFontSize(11);
-      doc.text('Defibrillation', 15, yPos);
-      yPos += 5;
-      doc.autoTable({
-        startY: yPos,
-        head: [['Time', 'Shock #', 'Energy', 'Rhythm']],
-        body: shockEvents.map((e, i) => [
-          e.cprTime,
-          i + 1,
-          `${e.energy || 'N/A'}J`,
-          e.rhythmBefore || 'N/A'
-        ]),
-        theme: 'striped',
-        styles: { fontSize: 8 },
-        margin: { left: 15 }
-      });
-      yPos = doc.lastAutoTable.finalY + 8;
-    }
-
-    // Event Log
-    if (events.length > 0 && yPos < 250) {
-      doc.setFontSize(11);
-      doc.text('Event Log (Recent)', 15, yPos);
-      yPos += 5;
-      doc.autoTable({
-        startY: yPos,
-        head: [['Time', 'Event', 'Details']],
-        body: events.slice(0, 15).map(e => [
-          e.cprTime,
-          e.type.toUpperCase(),
-          e.message
-        ]),
-        theme: 'striped',
-        styles: { fontSize: 7 },
-        margin: { left: 15 }
-      });
-      yPos = doc.lastAutoTable.finalY + 8;
-    }
-
-    // Note1 - During CPR
-    if (doctorNotes && yPos < 270) {
-      doc.setFontSize(11);
-      doc.text('Note1', 15, yPos);
+      doc.text('Note1 (During CPR)', 15, yPos);
       yPos += 5;
       doc.setFontSize(8);
       const splitNotes = doc.splitTextToSize(doctorNotes, 180);
@@ -687,20 +680,27 @@ export default function CPRTracker() {
       yPos += splitNotes.length * 4 + 5;
     }
 
-    // Note2 - End session notes
-    if (notes && yPos < 270) {
+    if (notes) {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
       doc.setFontSize(11);
-      doc.text('Note2', 15, yPos);
+      doc.text('Note2 (End Session)', 15, yPos);
       yPos += 5;
       doc.setFontSize(8);
       const splitNote2 = doc.splitTextToSize(notes, 180);
       doc.text(splitNote2, 15, yPos);
     }
 
-    // Footer
-    doc.setFontSize(7);
-    doc.setTextColor(107, 114, 128);
-    doc.text(`Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant`, 105, 285, { align: 'center' });
+    // Footer on last page
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7);
+      doc.setTextColor(107, 114, 128);
+      doc.text(`Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant | Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+    }
 
     // Download PDF
     const fileName = `CPR_Session_${new Date().toISOString().slice(0, 10)}_${new Date().getTime()}.pdf`;
