@@ -51,16 +51,19 @@ const CAUSES_6H6T = [
   'Thrombosis (myocardial infarction)'
 ];
 
-export default function CommonProcedures({ onAddProcedure }) {
+export default function CommonProcedures({ onAddProcedure, usedProcedures = [] }) {
   const [show6H6T, setShow6H6T] = useState(false);
 
   const handleProcedureClick = (proc) => {
     if (proc.special) {
       setShow6H6T(true);
     } else {
-      onAddProcedure({
-        procedure: proc.full
-      });
+      const isUsed = usedProcedures.includes(proc.short);
+      if (!isUsed) {
+        onAddProcedure({
+          procedure: proc.full
+        });
+      }
     }
   };
 
@@ -72,15 +75,26 @@ export default function CommonProcedures({ onAddProcedure }) {
         </div>
         
         <div className="grid grid-cols-3 gap-3">
-          {PROCEDURES.map((proc) => (
-            <Button
-              key={proc.short}
-              onClick={() => handleProcedureClick(proc)}
-              className={`h-14 text-base font-bold ${proc.color} text-white`}
-            >
-              {proc.short}
-            </Button>
-          ))}
+          {PROCEDURES.map((proc) => {
+            const isUsed = usedProcedures.includes(proc.short);
+            const canBeUsedMultipleTimes = proc.short === 'Echo' || proc.special;
+            const isDisabled = isUsed && !canBeUsedMultipleTimes;
+            
+            return (
+              <Button
+                key={proc.short}
+                onClick={() => handleProcedureClick(proc)}
+                disabled={isDisabled}
+                className={`h-14 text-base font-bold ${
+                  isDisabled 
+                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed' 
+                    : proc.color
+                } text-white`}
+              >
+                {proc.short}
+              </Button>
+            );
+          })}
         </div>
       </div>
 

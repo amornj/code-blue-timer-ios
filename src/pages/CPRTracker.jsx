@@ -74,6 +74,8 @@ export default function CPRTracker() {
   
   // Discretionary medications
   const [discretionaryMeds, setDiscretionaryMeds] = useState([]);
+  const [medicationCounts, setMedicationCounts] = useState({});
+  const [usedProcedures, setUsedProcedures] = useState([]);
 
   // Event tracking
   const [events, setEvents] = useState([]);
@@ -351,6 +353,8 @@ export default function CPRTracker() {
     setLidocaine05mgDue(false);
     setDiscretionaryMeds([]);
     setShockDeliveredThisCycle(false);
+    setMedicationCounts({});
+    setUsedProcedures([]);
   };
 
   const playClickSound = () => {
@@ -440,6 +444,16 @@ export default function CPRTracker() {
     };
     setDiscretionaryMeds(prev => [...prev, medEntry]);
     addEvent('discretionary_med', `${medication} - ${dosage} administered`, { medication, dosage });
+    
+    // Update medication counter
+    const medShortNames = ['Bicarb', 'Ca', 'Glu', 'Mg', 'KCl', 'Atropine'];
+    const matchedMed = medShortNames.find(name => medication.includes(name));
+    if (matchedMed) {
+      setMedicationCounts(prev => ({
+        ...prev,
+        [matchedMed]: (prev[matchedMed] || 0) + 1
+      }));
+    }
   };
 
   const handleAddProcedure = ({ procedure }) => {
@@ -451,6 +465,13 @@ export default function CPRTracker() {
     };
     setDiscretionaryMeds(prev => [...prev, { medication: procedure, dosage: procedure, ...procEntry }]);
     addEvent('procedure', `${procedure}`, { procedure });
+    
+    // Mark procedure as used
+    const procShortNames = ['A line', 'Central line', 'ETT', 'ECMO'];
+    const matchedProc = procShortNames.find(name => procedure.includes(name));
+    if (matchedProc && !usedProcedures.includes(matchedProc)) {
+      setUsedProcedures(prev => [...prev, matchedProc]);
+    }
   };
 
   const handleRhythmChange = (rhythm) => {
@@ -823,10 +844,10 @@ export default function CPRTracker() {
         />
 
         {/* Common Medications */}
-        <CommonMedications onAddMedication={handleAddDiscretionaryMed} />
+        <CommonMedications onAddMedication={handleAddDiscretionaryMed} medicationCounts={medicationCounts} />
 
         {/* Common Procedures */}
-        <CommonProcedures onAddProcedure={handleAddProcedure} />
+        <CommonProcedures onAddProcedure={handleAddProcedure} usedProcedures={usedProcedures} />
 
         {/* Event Log */}
         <EventLog events={events} />

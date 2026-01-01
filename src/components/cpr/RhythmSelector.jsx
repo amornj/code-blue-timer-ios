@@ -116,11 +116,12 @@ export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, on
           <Button
             onClick={() => setShowShockDialog(true)}
             disabled={shockDeliveredThisCycle}
-            className={`w-full h-16 text-lg font-bold rounded-xl ${
+            className={`w-full h-16 text-lg font-bold rounded-xl transition-all ${
               shockDeliveredThisCycle
                 ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-lg animate-pulse'
+                : 'bg-gradient-to-r from-yellow-500 to-red-600 hover:from-yellow-600 hover:to-red-700 text-white shadow-2xl shadow-yellow-500/50 border-2 border-yellow-400'
             }`}
+            style={!shockDeliveredThisCycle ? { animation: 'pulse 0.6s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {}}
           >
             <Zap className="w-6 h-6 mr-2" />
             {shockDeliveredThisCycle 
