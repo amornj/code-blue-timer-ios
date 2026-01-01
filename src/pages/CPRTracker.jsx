@@ -114,10 +114,11 @@ export default function CPRTracker() {
     const adrenalineIntervalSeconds = adrenalineFrequency * 60; // Convert minutes to seconds
     
     // Adrenaline rules:
-    // - VF/pVT: First dose at 4th minute (240s), then every 3-5 minutes based on frequency
+    // - VF/pVT: First dose after 2nd shock, then every 3-5 minutes based on frequency
     // - PEA/Asystole: First dose at 1st minute (60s), then every 3-5 minutes based on frequency
+    // - Crossover: maintain interval regardless of rhythm change
     const shouldShowAdrenaline = adrenalineCount === 0 
-      ? (isPEAorAsystole ? totalSeconds >= 60 : isShockable ? totalSeconds >= 240 : false)
+      ? (isPEAorAsystole ? totalSeconds >= 60 : isShockable ? shockCount >= 2 : false)
       : (timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds);
     
     if (shouldShowAdrenaline && !adrenalineDue) {
@@ -125,31 +126,31 @@ export default function CPRTracker() {
     }
     
     // Check amiodarone timing - only for shockable rhythms
-    const initialWasNonShockable = initialRhythm === 'PEA' || initialRhythm === 'Asystole';
-    
     // Amiodarone rules:
-    // - If initial rhythm was non-shockable and still non-shockable → never show
-    // - If in shockable rhythm → show based on CYCLES with defibrillation (not individual shocks)
-    if (isShockable) {
-      // After 3rd cycle with shock → 300mg
-      if (cyclesWithDefib >= 3 && amiodaroneTotal < 300) {
+    // - 300mg after 3rd shock (when in shockable rhythm)
+    // - 150mg after 5th shock (when in shockable rhythm)
+    // - Max 450mg total per session
+    if (isShockable && amiodaroneTotal < 450) {
+      if (shockCount >= 3 && amiodaroneTotal < 300) {
         setAmiodarone300Due(true);
       }
-      // After 5th cycle with shock → 150mg
-      if (cyclesWithDefib >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450) {
+      if (shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450) {
         setAmiodarone150Due(true);
       }
     }
     
-    // Lidocaine rules - only if VF/pVT persists after amiodarone
-    if (isShockable && amiodaroneTotal >= 450 && lidocaineCumulativeDose < 3) {
-      // After 6th cycle with shock → 1 mg/kg
-      if (cyclesWithDefib >= 6 && lidocaineCumulativeDose === 0) {
+    // Lidocaine (Xylocaine) rules
+    // - 1.5 mg/kg after 8th shock (when in shockable rhythm)
+    // - 0.75 mg/kg after 11th, 14th shock (when in shockable rhythm)
+    // - Max 3 mg/kg total per session
+    if (isShockable && lidocaineCumulativeDose < 3) {
+      if (shockCount >= 8 && lidocaineCumulativeDose === 0) {
         setLidocaine1mgDue(true);
       }
-      // Every ≥5 minutes → 0.5 mg/kg
-      const timeSinceLastLidocaine = lastLidocaineTime ? totalSeconds - lastLidocaineTime : null;
-      if (lidocaineCumulativeDose > 0 && timeSinceLastLidocaine !== null && timeSinceLastLidocaine >= 300) {
+      if (shockCount >= 11 && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 2.25) {
+        setLidocaine05mgDue(true);
+      }
+      if (shockCount >= 14 && lidocaineCumulativeDose >= 2.25 && lidocaineCumulativeDose < 3) {
         setLidocaine05mgDue(true);
       }
     }
@@ -199,18 +200,18 @@ export default function CPRTracker() {
         dose: 150,
         status: amiodarone150Due ? 'active' : 'pending'
       }] : []),
-      ...(isShockable && amiodaroneTotal >= 450 && lidocaineCumulativeDose < 1 ? [{
+      ...(isShockable && lidocaineCumulativeDose < 1.5 ? [{
         type: 'lidocaine',
-        label: 'Lidocaine 1 mg/kg',
-        timing: 'After 6th shock',
-        dose: 1,
+        label: 'Xylocaine 1.5 mg/kg',
+        timing: 'After 8th shock',
+        dose: 1.5,
         status: lidocaine1mgDue ? 'active' : 'pending'
       }] : []),
-      ...(isShockable && lidocaineCumulativeDose >= 1 && lidocaineCumulativeDose < 3 ? [{
+      ...(isShockable && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 3 ? [{
         type: 'lidocaine',
-        label: 'Lidocaine 0.5 mg/kg',
-        timing: 'Every ≥5 min',
-        dose: 0.5,
+        label: 'Xylocaine 0.75 mg/kg',
+        timing: 'After 11th, 14th shock',
+        dose: 0.75,
         status: lidocaine05mgDue ? 'active' : 'pending'
       }] : [])
     ];
@@ -340,12 +341,12 @@ export default function CPRTracker() {
   const handleConfirmLidocaine = (dose) => {
     setLidocaineCumulativeDose(prev => prev + dose);
     setLastLidocaineTime(totalSeconds);
-    if (dose === 1) {
+    if (dose === 1.5) {
       setLidocaine1mgDue(false);
-    } else if (dose === 0.5) {
+    } else if (dose === 0.75) {
       setLidocaine05mgDue(false);
     }
-    addEvent('lidocaine', `Lidocaine ${dose} mg/kg administered (cumulative: ${lidocaineCumulativeDose + dose} mg/kg)`, { dose });
+    addEvent('lidocaine', `Xylocaine ${dose} mg/kg administered (cumulative: ${lidocaineCumulativeDose + dose} mg/kg)`, { dose });
   };
 
   const handleAddDiscretionaryMed = ({ medication, dosage }) => {
@@ -714,6 +715,9 @@ export default function CPRTracker() {
           onToggleLucas={handleToggleLucas}
         />
 
+        {/* Event Log */}
+        <EventLog events={events} />
+
         {/* Discretionary Medication Section */}
         <div className="grid grid-cols-1 gap-6">
           <DiscretionaryMedication onAddMedication={handleAddDiscretionaryMed} />
@@ -738,9 +742,6 @@ export default function CPRTracker() {
               </div>
               </div>
               </div>
-
-        {/* Event Log */}
-        <EventLog events={events} />
       </div>
 
       {/* Confirm End Session Dialog */}
