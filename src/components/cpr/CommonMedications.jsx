@@ -5,32 +5,32 @@ const COMMON_MEDICATIONS = [
   { 
     short: 'Bicarb', 
     full: '7.5% Sodium Bicarbonate 50 mg IV',
-    color: 'bg-cyan-600 hover:bg-cyan-700'
+    color: 'bg-teal-600 hover:bg-teal-700'
   },
   { 
     short: 'Ca', 
     full: '10% Calcium Gluconate 10 ml IV',
-    color: 'bg-lime-600 hover:bg-lime-700'
+    color: 'bg-teal-600 hover:bg-teal-700'
   },
   { 
     short: 'Glu', 
     full: '50% Glucose 50 ml IV',
-    color: 'bg-orange-600 hover:bg-orange-700'
+    color: 'bg-teal-600 hover:bg-teal-700'
   },
   { 
     short: 'Mg', 
     full: '50% Magnesium Sulfate 2 ml IV',
-    color: 'bg-pink-600 hover:bg-pink-700'
+    color: 'bg-teal-600 hover:bg-teal-700'
   },
   { 
     short: 'KCl', 
     full: 'KCl 40 mEq in 5%DW 100 ml in 1 hour',
-    color: 'bg-violet-600 hover:bg-violet-700'
+    color: 'bg-teal-600 hover:bg-teal-700'
   },
   { 
     short: 'Atropine', 
     full: 'Atropine 0.6 mg IV',
-    color: 'bg-emerald-600 hover:bg-emerald-700'
+    color: 'bg-teal-600 hover:bg-teal-700'
   }
 ];
 

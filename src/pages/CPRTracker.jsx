@@ -15,6 +15,7 @@ import RhythmSelector from '@/components/cpr/RhythmSelector';
 import ShockButton from '@/components/cpr/ShockButton';
 import EventLog from '@/components/cpr/EventLog';
 import CommonMedications from '@/components/cpr/CommonMedications';
+import CommonProcedures from '@/components/cpr/CommonProcedures';
 
 const CYCLE_DURATION = 120; // 2 minutes in seconds
 
@@ -441,6 +442,17 @@ export default function CPRTracker() {
     addEvent('discretionary_med', `${medication} - ${dosage} administered`, { medication, dosage });
   };
 
+  const handleAddProcedure = ({ procedure }) => {
+    const procEntry = {
+      procedure,
+      cycle: currentCycle,
+      timestamp: new Date().toLocaleTimeString(),
+      cprTime: formatCPRTime(totalSeconds)
+    };
+    setDiscretionaryMeds(prev => [...prev, { medication: procedure, dosage: procedure, ...procEntry }]);
+    addEvent('procedure', `${procedure}`, { procedure });
+  };
+
   const handleRhythmChange = (rhythm) => {
     if (rhythmSelectionStage === 'selected') return; // Cannot change if already selected
     
@@ -638,6 +650,9 @@ export default function CPRTracker() {
         case 'discretionary_med':
           description = e.medication || e.dosage || 'Medication Administered';
           break;
+        case 'procedure':
+          description = e.procedure || 'Procedure Performed';
+          break;
         case 'cycle':
           description = e.message;
           break;
@@ -808,6 +823,9 @@ export default function CPRTracker() {
 
         {/* Common Medications */}
         <CommonMedications onAddMedication={handleAddDiscretionaryMed} />
+
+        {/* Common Procedures */}
+        <CommonProcedures onAddProcedure={handleAddProcedure} />
 
         {/* Event Log */}
         <EventLog events={events} />
