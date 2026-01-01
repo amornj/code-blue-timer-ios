@@ -83,8 +83,12 @@ export default function CPRTracker() {
   const [outcome, setOutcome] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Audio ref
+  // Audio refs
   const audioRef = useRef(null);
+  const thudAudioRef = useRef(null);
+  const beepAudioRef = useRef(null);
+  const clickAudioRef = useRef(null);
+  const beepIntervalRef = useRef(null);
 
   const formatCPRTime = useCallback((seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -222,6 +226,7 @@ export default function CPRTracker() {
   // Timer effect
   useEffect(() => {
     let interval;
+    let thudInterval;
     if (isRunning) {
       interval = setInterval(() => {
         setTotalSeconds(prev => prev + 1);
@@ -238,8 +243,68 @@ export default function CPRTracker() {
         });
       }, 1000);
     }
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (thudInterval) clearInterval(thudInterval);
+    };
   }, [isRunning]);
+
+  // Thud sound effect for cycle transitions (110-120s and 0-10s)
+  useEffect(() => {
+    if (!isRunning) return;
+    
+    const shouldPlayThud = (cycleSeconds >= 110 && cycleSeconds <= 120) || (cycleSeconds >= 0 && cycleSeconds <= 10);
+    
+    if (shouldPlayThud) {
+      const thudInterval = setInterval(() => {
+        if (thudAudioRef.current) {
+          thudAudioRef.current.currentTime = 0;
+          thudAudioRef.current.play().catch(() => {});
+        }
+      }, 1000);
+      
+      return () => clearInterval(thudInterval);
+    }
+  }, [isRunning, cycleSeconds]);
+
+  // Beep sound effect for active alerts
+  useEffect(() => {
+    const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
+    
+    if (hasActiveAlert && isRunning) {
+      // Clear any existing interval
+      if (beepIntervalRef.current) {
+        clearInterval(beepIntervalRef.current);
+      }
+      
+      // Play beep immediately
+      if (beepAudioRef.current) {
+        beepAudioRef.current.currentTime = 0;
+        beepAudioRef.current.play().catch(() => {});
+      }
+      
+      // Set up interval for continuous beeping
+      beepIntervalRef.current = setInterval(() => {
+        if (beepAudioRef.current) {
+          beepAudioRef.current.currentTime = 0;
+          beepAudioRef.current.play().catch(() => {});
+        }
+      }, 2000);
+      
+      return () => {
+        if (beepIntervalRef.current) {
+          clearInterval(beepIntervalRef.current);
+          beepIntervalRef.current = null;
+        }
+      };
+    } else {
+      // Stop beeping when no active alerts
+      if (beepIntervalRef.current) {
+        clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = null;
+      }
+    }
+  }, [bannerEvents, isRunning]);
 
   const handleStart = () => {
     if (!isRunning && totalSeconds === 0) {
@@ -285,7 +350,15 @@ export default function CPRTracker() {
     setShockDeliveredThisCycle(false);
   };
 
+  const playClickSound = () => {
+    if (clickAudioRef.current) {
+      clickAudioRef.current.currentTime = 0;
+      clickAudioRef.current.play().catch(() => {});
+    }
+  };
+
   const handleConfirmCompressorChange = () => {
+    playClickSound();
     const newCount = compressorChanges + 1;
     setCompressorChanges(newCount);
     if (lucasActive) {
@@ -307,6 +380,7 @@ export default function CPRTracker() {
   };
 
   const handleConfirmPulseCheck = () => {
+    playClickSound();
     const newCount = pulseChecks + 1;
     setPulseChecks(newCount);
     addEvent('pulse', `Pulse check performed (Cycle ${currentCycle})`);
@@ -318,6 +392,7 @@ export default function CPRTracker() {
   };
 
   const handleConfirmAdrenaline = () => {
+    playClickSound();
     setAdrenalineCount(prev => prev + 1);
     setLastAdrenalineTime(totalSeconds);
     setAdrenalineDue(false);
@@ -329,6 +404,7 @@ export default function CPRTracker() {
   };
 
   const handleConfirmAmiodarone = (dose) => {
+    playClickSound();
     setAmiodaroneTotal(prev => prev + dose);
     if (dose === 300) {
       setAmiodarone300Due(false);
@@ -339,6 +415,7 @@ export default function CPRTracker() {
   };
 
   const handleConfirmLidocaine = (dose) => {
+    playClickSound();
     setLidocaineCumulativeDose(prev => prev + dose);
     setLastLidocaineTime(totalSeconds);
     if (dose === 1.5) {
@@ -383,6 +460,7 @@ export default function CPRTracker() {
   };
 
   const handleShockDelivered = (energy) => {
+    playClickSound();
     setShockCount(prev => prev + 1);
     setShocksInCurrentShockableRhythm(prev => prev + 1);
     
@@ -627,8 +705,14 @@ export default function CPRTracker() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-6">
-      {/* Hidden audio element for alerts */}
-      <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" />
+      {/* Hidden audio elements for alerts */}
+      <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" />
+      {/* Thud sound - low frequency for cycle transitions */}
+      <audio ref={thudAudioRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" />
+      {/* Beep sound - higher frequency alert */}
+      <audio ref={beepAudioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" />
+      {/* Click sound - short confirmation */}
+      <audio ref={clickAudioRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" />
       
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-6">
