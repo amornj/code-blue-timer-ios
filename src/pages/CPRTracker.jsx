@@ -121,10 +121,10 @@ export default function CPRTracker() {
     
     // Adrenaline rules:
     // - VF/pVT: First dose after 2nd shock, then every 3-5 minutes based on frequency
-    // - PEA/Asystole: First dose at 1st minute (60s), then every 3-5 minutes based on frequency
+    // - PEA/Asystole: First dose at 10 seconds, then every 3-5 minutes based on frequency
     // - Crossover: maintain interval regardless of rhythm change
     const shouldShowAdrenaline = adrenalineCount === 0 
-      ? (isPEAorAsystole ? totalSeconds >= 60 : isShockable ? shockCount >= 2 : false)
+      ? (isPEAorAsystole ? totalSeconds >= 10 : isShockable ? shockCount >= 2 : false)
       : (timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds);
     
     if (shouldShowAdrenaline && !adrenalineDue) {

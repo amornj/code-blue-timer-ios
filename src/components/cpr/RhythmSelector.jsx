@@ -35,7 +35,7 @@ export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, on
         </div>
         <div className={`text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full ${
           rhythmSelectionStage === 'unselected' 
-            ? 'bg-amber-900/50 text-amber-300 border border-amber-500' 
+            ? 'bg-amber-900/50 text-amber-300 border border-amber-500 animate-pulse' 
             : 'bg-green-900/50 text-green-300 border border-green-500'
         }`}>
           {rhythmSelectionStage === 'unselected' ? 'Select Rhythm' : 'Rhythm Selected'}
