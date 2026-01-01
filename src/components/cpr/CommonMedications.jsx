@@ -34,7 +34,7 @@ const COMMON_MEDICATIONS = [
   }
 ];
 
-export default function CommonMedications({ onAddMedication, medicationCounts = {} }) {
+export default function CommonMedications({ onAddMedication, medicationCounts = {}, disabled = false }) {
   const handleMedClick = (med) => {
     onAddMedication({
       medication: med.full,
@@ -55,7 +55,8 @@ export default function CommonMedications({ onAddMedication, medicationCounts = 
             <Button
               key={med.short}
               onClick={() => handleMedClick(med)}
-              className={`h-14 text-base font-bold ${med.color} text-white relative`}
+              disabled={disabled}
+              className={`h-14 text-base font-bold ${med.color} text-white relative disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {med.short}
               {count > 0 && (

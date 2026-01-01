@@ -13,7 +13,8 @@ export default function EventBanner({
   onConfirmLidocaine,
   onAdrenalineFrequencyChange,
   lucasActive,
-  onToggleLucas
+  onToggleLucas,
+  disabled = false
 }) {
   const adrenalineRef = useRef(null);
 
@@ -91,6 +92,7 @@ export default function EventBanner({
               <Switch
                 checked={lucasActive}
                 onCheckedChange={onToggleLucas}
+                disabled={disabled}
                 className="data-[state=checked]:bg-amber-500"
               />
             </div>
@@ -109,6 +111,7 @@ export default function EventBanner({
                   size="sm" 
                   className={`mt-2 w-full ${getButtonColors(event.type)} text-white font-bold`}
                   onClick={() => handleConfirm(event)}
+                  disabled={disabled}
                 >
                   <Check className="w-4 h-4 mr-1" /> Confirm
                 </Button>
@@ -128,11 +131,12 @@ export default function EventBanner({
                   <button
                     key={freq}
                     onClick={() => onAdrenalineFrequencyChange(freq)}
+                    disabled={disabled}
                     className={`w-7 h-7 rounded-md text-xs font-bold transition-all ${
                       event.frequency === freq
                         ? 'bg-black/40 text-white shadow-md border border-current'
                         : 'bg-black/20 text-current/60 hover:bg-black/30'
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {freq}
                   </button>

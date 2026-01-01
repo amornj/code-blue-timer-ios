@@ -851,6 +851,7 @@ export default function CPRTracker() {
           shockCount={shockCount}
           shockDeliveredThisCycle={shockDeliveredThisCycle}
           isRunning={isRunning}
+          disabled={totalSeconds === 0}
         />
 
         {/* Event Banners */}
@@ -864,13 +865,14 @@ export default function CPRTracker() {
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
           lucasActive={lucasActive}
           onToggleLucas={handleToggleLucas}
+          disabled={totalSeconds === 0}
         />
 
         {/* Common Medications */}
-        <CommonMedications onAddMedication={handleAddDiscretionaryMed} medicationCounts={medicationCounts} />
+        <CommonMedications onAddMedication={handleAddDiscretionaryMed} medicationCounts={medicationCounts} disabled={totalSeconds === 0} />
 
         {/* Common Procedures */}
-        <CommonProcedures onAddProcedure={handleAddProcedure} usedProcedures={usedProcedures} />
+        <CommonProcedures onAddProcedure={handleAddProcedure} usedProcedures={usedProcedures} disabled={totalSeconds === 0} />
 
         {/* Event Log */}
         <EventLog events={events} />
@@ -887,7 +889,8 @@ export default function CPRTracker() {
               placeholder="text"
               maxLength={200}
               rows={4}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={totalSeconds === 0}
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <div className="text-xs text-slate-500 mt-1 text-right">
               {doctorNotes.length}/200 characters

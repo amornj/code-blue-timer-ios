@@ -51,7 +51,7 @@ const CAUSES_6H6T = [
   'Thrombosis (myocardial infarction)'
 ];
 
-export default function CommonProcedures({ onAddProcedure, usedProcedures = [] }) {
+export default function CommonProcedures({ onAddProcedure, usedProcedures = [], disabled = false }) {
   const [show6H6T, setShow6H6T] = useState(false);
 
   const handleProcedureClick = (proc) => {
@@ -78,7 +78,7 @@ export default function CommonProcedures({ onAddProcedure, usedProcedures = [] }
           {PROCEDURES.map((proc) => {
             const isUsed = usedProcedures.includes(proc.short);
             const canBeUsedMultipleTimes = proc.short === 'Echo' || proc.special;
-            const isDisabled = isUsed && !canBeUsedMultipleTimes;
+            const isDisabled = disabled || (isUsed && !canBeUsedMultipleTimes);
             
             return (
               <Button
