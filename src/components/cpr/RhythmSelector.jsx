@@ -16,7 +16,7 @@ const NON_SHOCKABLE_RHYTHMS = [
 
 const ENERGY_OPTIONS = [120, 150, 200, 250, 300, 360];
 
-export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle }) {
+export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle, isRunning }) {
   const isShockable = SHOCKABLE_RHYTHMS.some(r => r.id === currentRhythm);
   const [showShockDialog, setShowShockDialog] = useState(false);
   const [selectedEnergy, setSelectedEnergy] = useState(200);
@@ -33,11 +33,14 @@ export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, on
           <Activity className="w-5 h-5 text-slate-400" />
           <span className="text-slate-400 text-sm font-medium tracking-wide uppercase">Heart Rhythm</span>
         </div>
-        <div className={`text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full ${
-          rhythmSelectionStage === 'unselected' 
-            ? 'bg-amber-900/50 text-amber-300 border border-amber-500 animate-pulse' 
+        <div className={`text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full transition-all ${
+          rhythmSelectionStage === 'unselected' && isRunning
+            ? 'bg-red-600 text-white border-2 border-red-400 animate-pulse shadow-lg shadow-red-500/50' 
+            : rhythmSelectionStage === 'unselected'
+            ? 'bg-amber-900/50 text-amber-300 border border-amber-500'
             : 'bg-green-900/50 text-green-300 border border-green-500'
-        }`}>
+        }`}
+        style={rhythmSelectionStage === 'unselected' && isRunning ? { animationDuration: '0.5s' } : {}}>
           {rhythmSelectionStage === 'unselected' ? 'Select Rhythm' : 'Rhythm Selected'}
         </div>
       </div>

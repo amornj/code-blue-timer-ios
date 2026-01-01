@@ -806,6 +806,7 @@ export default function CPRTracker() {
           onShockDelivered={handleShockDelivered}
           shockCount={shockCount}
           shockDeliveredThisCycle={shockDeliveredThisCycle}
+          isRunning={isRunning}
         />
 
         {/* Event Banners */}
