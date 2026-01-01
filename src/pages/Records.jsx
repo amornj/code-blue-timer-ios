@@ -211,7 +211,6 @@ export default function Records() {
         case 'death': return 'Death';
         case 'VA_ECMO': return 'Transit to VA ECMO';
         case 'transfer_ICU': return 'Transfer to ICU or other hospital';
-        // Legacy support
         case 'ROSC': return 'ROSC';
         case 'deceased': return 'Deceased';
         case 'ongoing': return 'Ongoing';
@@ -258,80 +257,133 @@ export default function Records() {
     yPos += 10;
 
     doc.setFontSize(9);
-    doc.text(`Shocks: ${record.shocks_delivered?.length || 0} | Adrenaline: ${record.adrenaline_doses?.length || 0} | Amiodarone: ${record.amiodarone_doses?.reduce((sum, d) => sum + (d.dose_mg || 0), 0) || 0}mg | Compressor Changes: ${record.compressor_changes?.length || 0}`, 15, yPos);
+    doc.text(`Shocks: ${record.shocks_delivered?.length || 0} | Adrenaline: ${record.adrenaline_doses?.length || 0} | Amiodarone: ${record.amiodarone_doses?.reduce((sum, d) => sum + (d.dose_mg || 0), 0) || 0}mg | Lidocaine: ${record.lidocaine_doses?.reduce((sum, d) => sum + (d.dose_mg_per_kg || 0), 0) || 0}mg/kg | Compressor Changes: ${record.compressor_changes?.length || 0}`, 15, yPos);
     yPos += 10;
 
-    // Medications
-    const allMeds = [
-      ...(record.adrenaline_doses || []).map(d => ({ ...d, med: 'Adrenaline', dose: d.dose_mg })),
-      ...(record.amiodarone_doses || []).map(d => ({ ...d, med: 'Amiodarone', dose: d.dose_mg }))
-    ].sort((a, b) => a.cycle - b.cycle);
+    // Build comprehensive event log from all data
+    const allEvents = [];
+    
+    // Start event
+    allEvents.push({
+      time: format(new Date(record.start_time), 'HH:mm'),
+      description: 'CPR Session Started',
+      cycle: '-'
+    });
+    
+    // Rhythm changes
+    (record.rhythm_history || []).forEach(r => {
+      allEvents.push({
+        time: r.timestamp,
+        description: `Rhythm Check: ${r.rhythm}`,
+        cycle: r.cycle
+      });
+    });
+    
+    // Shocks
+    (record.shocks_delivered || []).forEach(s => {
+      allEvents.push({
+        time: s.timestamp,
+        description: `Shock Delivered @ ${s.energy_joules}J (Rhythm: ${s.rhythm_before})`,
+        cycle: s.cycle
+      });
+    });
+    
+    // Compressor changes (including LUCAS)
+    (record.compressor_changes || []).forEach(c => {
+      allEvents.push({
+        time: c.timestamp,
+        description: 'Compressor Changed',
+        cycle: c.cycle
+      });
+    });
+    
+    // Pulse checks
+    (record.pulse_checks || []).forEach(p => {
+      allEvents.push({
+        time: p.timestamp,
+        description: 'Pulse Check Performed',
+        cycle: p.cycle
+      });
+    });
+    
+    // Adrenaline
+    (record.adrenaline_doses || []).forEach(a => {
+      allEvents.push({
+        time: a.timestamp,
+        description: `Adrenaline ${a.dose_mg}mg IV`,
+        cycle: a.cycle
+      });
+    });
+    
+    // Amiodarone
+    (record.amiodarone_doses || []).forEach(a => {
+      allEvents.push({
+        time: a.timestamp,
+        description: `Amiodarone ${a.dose_mg}mg IV`,
+        cycle: a.cycle
+      });
+    });
+    
+    // Lidocaine
+    (record.lidocaine_doses || []).forEach(l => {
+      allEvents.push({
+        time: l.timestamp,
+        description: `Xylocaine ${l.dose_mg_per_kg} mg/kg IV`,
+        cycle: l.cycle
+      });
+    });
+    
+    // Discretionary medications
+    (record.discretionary_medications || []).forEach(m => {
+      allEvents.push({
+        time: m.timestamp,
+        description: m.medication || m.dosage,
+        cycle: m.cycle
+      });
+    });
+    
+    // End event
+    if (record.end_time) {
+      allEvents.push({
+        time: format(new Date(record.end_time), 'HH:mm'),
+        description: `CPR Session Ended (Outcome: ${formatOutcome(record.outcome)})`,
+        cycle: '-'
+      });
+    }
+    
+    // Sort by time
+    allEvents.sort((a, b) => {
+      const timeA = a.time.split(':').map(Number);
+      const timeB = b.time.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    });
 
-    if (allMeds.length > 0) {
+    // Single Event Log Table
+    if (allEvents.length > 0) {
       doc.setFontSize(11);
-      doc.text('Medications', 15, yPos);
+      doc.text('Event Log', 15, yPos);
       yPos += 5;
+      
       doc.autoTable({
         startY: yPos,
-        head: [['Cycle', 'Medication', 'Dose', 'Time']],
-        body: allMeds.map(d => [
-          d.cycle,
-          d.med,
-          `${d.dose}mg`,
-          d.timestamp
-        ]),
+        head: [['Time', 'Event', 'Cycle']],
+        body: allEvents.map(e => [e.time, e.description, e.cycle || '-']),
         theme: 'striped',
         styles: { fontSize: 8 },
-        margin: { left: 15 }
+        margin: { left: 15 },
+        headStyles: { fillColor: [30, 64, 175] }
       });
       yPos = doc.lastAutoTable.finalY + 8;
     }
 
-    // Defibrillation
-    if (record.shocks_delivered?.length > 0 && yPos < 250) {
+    // Notes section
+    if (record.doctor_notes) {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
       doc.setFontSize(11);
-      doc.text('Defibrillation', 15, yPos);
-      yPos += 5;
-      doc.autoTable({
-        startY: yPos,
-        head: [['Shock #', 'Energy', 'Rhythm', 'Cycle']],
-        body: record.shocks_delivered.map(s => [
-          s.shock_number,
-          `${s.energy_joules}J`,
-          s.rhythm_before || 'N/A',
-          s.cycle
-        ]),
-        theme: 'striped',
-        styles: { fontSize: 8 },
-        margin: { left: 15 }
-      });
-      yPos = doc.lastAutoTable.finalY + 8;
-    }
-
-    // Rhythm Changes
-    if (record.rhythm_history?.length > 0 && yPos < 250) {
-      doc.setFontSize(11);
-      doc.text('Rhythm Changes', 15, yPos);
-      yPos += 5;
-      doc.autoTable({
-        startY: yPos,
-        head: [['Cycle', 'Rhythm', 'Time']],
-        body: record.rhythm_history.map(r => [
-          r.cycle,
-          r.rhythm,
-          r.timestamp
-        ]),
-        theme: 'striped',
-        styles: { fontSize: 8 },
-        margin: { left: 15 }
-      });
-      yPos = doc.lastAutoTable.finalY + 8;
-    }
-
-    // Note1 - During CPR
-    if (record.doctor_notes && yPos < 270) {
-      doc.setFontSize(11);
-      doc.text('Note1', 15, yPos);
+      doc.text('Note1 (During CPR)', 15, yPos);
       yPos += 5;
       doc.setFontSize(8);
       const splitNotes = doc.splitTextToSize(record.doctor_notes, 180);
@@ -339,10 +391,13 @@ export default function Records() {
       yPos += splitNotes.length * 4 + 5;
     }
 
-    // Note2 - End session notes
-    if (record.notes && yPos < 270) {
+    if (record.notes) {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
       doc.setFontSize(11);
-      doc.text('Note2', 15, yPos);
+      doc.text('Note2 (End Session)', 15, yPos);
       yPos += 5;
       doc.setFontSize(8);
       const splitNote2 = doc.splitTextToSize(record.notes, 180);
@@ -350,20 +405,27 @@ export default function Records() {
       yPos += splitNote2.length * 4 + 5;
     }
 
-    // Note3 - Post CPR notes
-    if (record.post_cpr_notes && yPos < 270) {
+    if (record.post_cpr_notes) {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
       doc.setFontSize(11);
-      doc.text('Note3', 15, yPos);
+      doc.text('Note3 (Post CPR)', 15, yPos);
       yPos += 5;
       doc.setFontSize(8);
       const splitNote3 = doc.splitTextToSize(record.post_cpr_notes, 180);
       doc.text(splitNote3, 15, yPos);
     }
 
-    // Footer
-    doc.setFontSize(7);
-    doc.setTextColor(107, 114, 128);
-    doc.text(`Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant`, 105, 285, { align: 'center' });
+    // Footer on all pages
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7);
+      doc.setTextColor(107, 114, 128);
+      doc.text(`Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant | Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+    }
 
     // Download
     const fileName = `CPR_Record_${record.patient_name || 'Session'}_${format(new Date(record.start_time), 'yyyy-MM-dd')}.pdf`;
