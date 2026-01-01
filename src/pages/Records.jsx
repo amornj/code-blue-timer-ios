@@ -263,13 +263,6 @@ export default function Records() {
     // Build comprehensive event log from all data
     const allEvents = [];
     
-    // Start event
-    allEvents.push({
-      time: format(new Date(record.start_time), 'HH:mm'),
-      description: 'CPR Session Started',
-      cycle: '-'
-    });
-    
     // Rhythm changes
     (record.rhythm_history || []).forEach(r => {
       allEvents.push({
@@ -358,8 +351,10 @@ export default function Records() {
       return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
     });
 
-    // Single Event Log Table
-    if (allEvents.length > 0) {
+    // Single Event Log Table (filter out start event)
+    const filteredEvents = allEvents.filter(e => e.description !== 'CPR Session Started');
+    
+    if (filteredEvents.length > 0) {
       doc.setFontSize(11);
       doc.text('Event Log', 15, yPos);
       yPos += 5;
@@ -367,7 +362,7 @@ export default function Records() {
       doc.autoTable({
         startY: yPos,
         head: [['Time', 'Event', 'Cycle']],
-        body: allEvents.map(e => [e.time, e.description, e.cycle || '-']),
+        body: filteredEvents.map(e => [e.time, e.description, e.cycle || '-']),
         theme: 'striped',
         styles: { fontSize: 8 },
         margin: { left: 15 },
