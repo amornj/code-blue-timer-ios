@@ -666,11 +666,8 @@ export default function CPRTracker() {
     // Single Event Log Table
     const formatEventForPDF = (e) => {
       let description = '';
-      
+
       switch (e.type) {
-        case 'start':
-          description = 'CPR Session Started';
-          break;
         case 'rhythm':
           description = e.message;
           break;
@@ -712,11 +709,13 @@ export default function CPRTracker() {
       doc.setFontSize(11);
       doc.text('Event Log', 15, yPos);
       yPos += 5;
-      
+
+      const filteredEvents = events.filter(e => e.type !== 'start');
+
       doc.autoTable({
         startY: yPos,
         head: [['Time', 'Event', 'Cycle']],
-        body: events.map(formatEventForPDF),
+        body: filteredEvents.map(formatEventForPDF),
         theme: 'striped',
         styles: { fontSize: 8 },
         margin: { left: 15 },
