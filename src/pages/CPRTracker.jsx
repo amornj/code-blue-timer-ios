@@ -445,13 +445,25 @@ export default function CPRTracker() {
     setDiscretionaryMeds(prev => [...prev, medEntry]);
     addEvent('discretionary_med', `${medication} - ${dosage} administered`, { medication, dosage });
     
-    // Update medication counter
-    const medShortNames = ['Bicarb', 'Ca', 'Glu', 'Mg', 'KCl', 'Atropine'];
-    const matchedMed = medShortNames.find(name => medication.includes(name));
+    // Update medication counter - map short names to full medication names
+    const medMapping = {
+      'Bicarb': 'Sodium Bicarbonate',
+      'Ca': 'Calcium',
+      'Glu': 'Glucose',
+      'Mg': 'Magnesium',
+      'KCl': 'KCl',
+      'Atropine': 'Atropine'
+    };
+    
+    const matchedMed = Object.entries(medMapping).find(([short, full]) => 
+      medication.includes(full)
+    );
+    
     if (matchedMed) {
+      const [shortName] = matchedMed;
       setMedicationCounts(prev => ({
         ...prev,
-        [matchedMed]: (prev[matchedMed] || 0) + 1
+        [shortName]: (prev[shortName] || 0) + 1
       }));
     }
   };
@@ -466,11 +478,23 @@ export default function CPRTracker() {
     setDiscretionaryMeds(prev => [...prev, { medication: procedure, dosage: procedure, ...procEntry }]);
     addEvent('procedure', `${procedure}`, { procedure });
     
-    // Mark procedure as used
-    const procShortNames = ['A line', 'Central line', 'ETT', 'ECMO'];
-    const matchedProc = procShortNames.find(name => procedure.includes(name));
-    if (matchedProc && !usedProcedures.includes(matchedProc)) {
-      setUsedProcedures(prev => [...prev, matchedProc]);
+    // Mark procedure as used - map short names to full procedure names
+    const procMapping = {
+      'A line': 'A line insertion',
+      'Central line': 'Central line insertion',
+      'ETT': 'Endotracheal intubation',
+      'ECMO': 'ECMO insertion'
+    };
+    
+    const matchedProc = Object.entries(procMapping).find(([short, full]) => 
+      procedure.includes(full)
+    );
+    
+    if (matchedProc) {
+      const [shortName] = matchedProc;
+      if (!usedProcedures.includes(shortName)) {
+        setUsedProcedures(prev => [...prev, shortName]);
+      }
     }
   };
 
