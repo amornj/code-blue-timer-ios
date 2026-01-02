@@ -258,28 +258,42 @@ export default function CPRTracker() {
 
   // Function to play beep using Web Audio API (more reliable on Safari)
   const playBeepSound = useCallback(() => {
-    if (!audioContextRef.current || !audioUnlocked.current) return;
+    if (!audioContextRef.current || !audioUnlocked.current) {
+      console.log('Beep skipped - audio not ready:', { 
+        hasContext: !!audioContextRef.current, 
+        unlocked: audioUnlocked.current 
+      });
+      return;
+    }
 
     try {
       const ctx = audioContextRef.current;
+      
+      // Resume if suspended (iOS background)
       if (ctx.state === 'suspended') {
-        ctx.resume();
+        ctx.resume().then(() => {
+          console.log('Audio context resumed');
+        });
       }
 
+      // Create oscillator
       const oscillator = ctx.createOscillator();
       const gainNode = ctx.createGain();
       
       oscillator.frequency.value = 800; // 800 Hz beep
       oscillator.type = 'sine';
       
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      // Set volume envelope
+      gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
       
       oscillator.connect(gainNode);
       gainNode.connect(ctx.destination);
       
       oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.3);
+      oscillator.stop(ctx.currentTime + 0.4);
+      
+      console.log('Beep played successfully');
     } catch (err) {
       console.error('Beep sound failed:', err);
     }
@@ -354,15 +368,16 @@ export default function CPRTracker() {
       // Play a brief audible sound to unlock (Safari needs audible feedback)
       const oscillator = audioContextRef.current.createOscillator();
       const gainNode = audioContextRef.current.createGain();
-      gainNode.gain.value = 0.1; // Audible but quiet
+      gainNode.gain.value = 0.15; // Audible
       oscillator.connect(gainNode);
       gainNode.connect(audioContextRef.current.destination);
       oscillator.frequency.value = 440; // A4 note
+      oscillator.type = 'sine';
       oscillator.start(audioContextRef.current.currentTime);
-      oscillator.stop(audioContextRef.current.currentTime + 0.05);
+      oscillator.stop(audioContextRef.current.currentTime + 0.1);
 
-      // Small delay to ensure oscillator plays
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for sound to finish
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       // Also unlock regular audio elements
       const audioElements = [audioRef.current, thudAudioRef.current, beepAudioRef.current, clickAudioRef.current];
@@ -379,13 +394,14 @@ export default function CPRTracker() {
         }
       }
 
-      // Verify audio context is running
-      if (audioContextRef.current.state === 'running') {
-        audioUnlocked.current = true;
+      // Mark as unlocked and update state
+      audioUnlocked.current = true;
+      
+      // Force state update after a brief delay to ensure it renders
+      setTimeout(() => {
         setAudioEnabled(true);
-      } else {
-        throw new Error('Audio context not running after unlock');
-      }
+      }, 200);
+
     } catch (err) {
       console.error('Audio unlock failed:', err);
       setAudioEnabled(false);
