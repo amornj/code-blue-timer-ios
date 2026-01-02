@@ -310,28 +310,18 @@ export default function CPRTracker() {
     }
   }, [bannerEvents, isRunning]);
 
-  const unlockAllAudio = async () => {
-    // Unlock all audio elements for mobile browsers (iOS/Android)
+  const handleStart = () => {
+    // Unlock audio on first user interaction (sync for iOS compatibility)
     const audioElements = [audioRef.current, thudAudioRef.current, beepAudioRef.current, clickAudioRef.current];
-    
-    for (const audio of audioElements) {
+    audioElements.forEach(audio => {
       if (audio) {
-        try {
-          audio.volume = 1;
-          await audio.play();
+        audio.volume = 1;
+        audio.play().then(() => {
           audio.pause();
           audio.currentTime = 0;
-          console.log('Audio unlocked successfully');
-        } catch (e) {
-          console.log('Audio unlock attempt:', e);
-        }
+        }).catch(() => {});
       }
-    }
-  };
-
-  const handleStart = async () => {
-    // Unlock audio on first user interaction
-    await unlockAllAudio();
+    });
     
     if (!isRunning && totalSeconds === 0) {
       const now = new Date();
@@ -812,11 +802,6 @@ export default function CPRTracker() {
       
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-6">
-        {totalSeconds === 0 && (
-          <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-3 mb-4 text-amber-300 text-sm text-center">
-            📱 Tap "Start CPR" button to enable alarm sounds on mobile devices
-          </div>
-        )}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
