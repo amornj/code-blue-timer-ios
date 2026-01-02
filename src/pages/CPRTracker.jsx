@@ -893,35 +893,6 @@ export default function CPRTracker() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-            {/* Audio Status and Toggle */}
-            <div className="flex items-center gap-3">
-              {audioEnabled !== null && (
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
-                  audioEnabled 
-                    ? 'bg-green-900/50 text-green-400 border border-green-700' 
-                    : 'bg-red-900/50 text-red-400 border border-red-700'
-                }`}>
-                  {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                  {audioEnabled ? 'Sound enabled' : 'Sound blocked'}
-                </div>
-              )}
-              
-              {!audioEnabled && audioEnabled !== null && (
-                <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-                  <span className="text-sm text-slate-400">Enable sound</span>
-                  <Switch
-                    checked={audioEnabled}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        unlockAudio();
-                      }
-                    }}
-                    className="data-[state=checked]:bg-green-600"
-                  />
-                </div>
-              )}
-            </div>
-            
             {totalSeconds === 0 ? (
               <Button 
                 onClick={handleStart}
@@ -939,13 +910,42 @@ export default function CPRTracker() {
                 Session Ended
               </Button>
             ) : (
-              <Button 
-                onClick={() => setShowConfirmEnd(true)}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 h-12 text-lg font-semibold"
-              >
-                <Square className="w-5 h-5 mr-2" />
-                End Session
-              </Button>
+              <>
+                {/* Audio Status and Toggle */}
+                {audioEnabled !== null && (
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    audioEnabled 
+                      ? 'bg-green-900/50 text-green-400 border border-green-700' 
+                      : 'bg-red-900/50 text-red-400 border border-red-700'
+                  }`}>
+                    {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                    {audioEnabled ? 'Sound enabled' : 'Sound blocked'}
+                  </div>
+                )}
+                
+                {!audioEnabled && audioEnabled !== null && (
+                  <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <span className="text-sm text-slate-400">Enable sound</span>
+                    <Switch
+                      checked={audioEnabled}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          unlockAudio();
+                        }
+                      }}
+                      className="data-[state=checked]:bg-green-600"
+                    />
+                  </div>
+                )}
+                
+                <Button 
+                  onClick={() => setShowConfirmEnd(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 h-12 text-lg font-semibold"
+                >
+                  <Square className="w-5 h-5 mr-2" />
+                  End Session
+                </Button>
+              </>
             )}
 
             <Button 
