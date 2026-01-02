@@ -33,6 +33,7 @@ export default function CPRTracker() {
 
   // Session state
   const [isRunning, setIsRunning] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false); // Track if CPR has been started
   const [totalSeconds, setTotalSeconds] = useState(0);
   const [cycleSeconds, setCycleSeconds] = useState(0);
   const [currentCycle, setCurrentCycle] = useState(1);
@@ -315,6 +316,7 @@ export default function CPRTracker() {
       const now = new Date();
       setStartTime(now.toLocaleString());
       addEvent('start', 'CPR Session Started');
+      setHasStarted(true);
     }
     setIsRunning(true);
   };
@@ -325,6 +327,7 @@ export default function CPRTracker() {
 
   const handleReset = () => {
     setIsRunning(false);
+    setHasStarted(false);
     setTotalSeconds(0);
     setCycleSeconds(0);
     setCurrentCycle(1);
@@ -851,6 +854,7 @@ export default function CPRTracker() {
           shockCount={shockCount}
           shockDeliveredThisCycle={shockDeliveredThisCycle}
           isRunning={isRunning}
+          disabled={!hasStarted}
         />
 
         {/* Event Banners */}
@@ -864,13 +868,22 @@ export default function CPRTracker() {
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
           lucasActive={lucasActive}
           onToggleLucas={handleToggleLucas}
+          disabled={!hasStarted}
         />
 
         {/* Common Medications */}
-        <CommonMedications onAddMedication={handleAddDiscretionaryMed} medicationCounts={medicationCounts} />
+        <CommonMedications 
+          onAddMedication={handleAddDiscretionaryMed} 
+          medicationCounts={medicationCounts}
+          disabled={!hasStarted}
+        />
 
         {/* Common Procedures */}
-        <CommonProcedures onAddProcedure={handleAddProcedure} usedProcedures={usedProcedures} />
+        <CommonProcedures 
+          onAddProcedure={handleAddProcedure} 
+          usedProcedures={usedProcedures}
+          disabled={!hasStarted}
+        />
 
         {/* Event Log */}
         <EventLog events={events} />
@@ -887,7 +900,8 @@ export default function CPRTracker() {
               placeholder="text"
               maxLength={200}
               rows={4}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={!hasStarted}
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <div className="text-xs text-slate-500 mt-1 text-right">
               {doctorNotes.length}/200 characters
