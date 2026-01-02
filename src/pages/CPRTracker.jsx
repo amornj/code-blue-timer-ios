@@ -842,19 +842,6 @@ export default function CPRTracker() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-            {/* Sound Toggle Switch */}
-            <div className="flex items-center gap-3 bg-slate-800 rounded-lg px-4 py-2.5 border border-slate-700">
-              <span className={`text-sm font-medium ${soundEnabled ? 'text-green-400' : 'text-slate-400'}`}>
-                {soundEnabled ? '🔊 Sound' : '🔇 Sound'}
-              </span>
-              <Switch
-                checked={soundEnabled}
-                onCheckedChange={setSoundEnabled}
-                disabled={!hasStarted}
-                className="data-[state=checked]:bg-green-600"
-              />
-            </div>
-
             {totalSeconds === 0 ? (
               <Button 
                 onClick={handleStart}
