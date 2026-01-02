@@ -315,6 +315,40 @@ export default function CPRTracker() {
       const now = new Date();
       setStartTime(now.toLocaleString());
       addEvent('start', 'CPR Session Started');
+      
+      // Unlock audio on first user interaction (required for mobile browsers)
+      if (audioRef.current) {
+        audioRef.current.volume = 0;
+        audioRef.current.play().then(() => {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          audioRef.current.volume = 1;
+        }).catch(() => {});
+      }
+      if (thudAudioRef.current) {
+        thudAudioRef.current.volume = 0;
+        thudAudioRef.current.play().then(() => {
+          thudAudioRef.current.pause();
+          thudAudioRef.current.currentTime = 0;
+          thudAudioRef.current.volume = 1;
+        }).catch(() => {});
+      }
+      if (beepAudioRef.current) {
+        beepAudioRef.current.volume = 0;
+        beepAudioRef.current.play().then(() => {
+          beepAudioRef.current.pause();
+          beepAudioRef.current.currentTime = 0;
+          beepAudioRef.current.volume = 1;
+        }).catch(() => {});
+      }
+      if (clickAudioRef.current) {
+        clickAudioRef.current.volume = 0;
+        clickAudioRef.current.play().then(() => {
+          clickAudioRef.current.pause();
+          clickAudioRef.current.currentTime = 0;
+          clickAudioRef.current.volume = 1;
+        }).catch(() => {});
+      }
     }
     setIsRunning(true);
   };
