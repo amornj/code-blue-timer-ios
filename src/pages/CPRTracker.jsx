@@ -93,6 +93,7 @@ export default function CPRTracker() {
   const beepAudioRef = useRef(null);
   const clickAudioRef = useRef(null);
   const beepIntervalRef = useRef(null);
+  const audioUnlocked = useRef(false);
 
   const formatCPRTime = useCallback((seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -310,7 +311,31 @@ export default function CPRTracker() {
     }
   }, [bannerEvents, isRunning]);
 
+  const unlockAudio = () => {
+    if (audioUnlocked.current) return;
+
+    // Unlock all audio elements for Safari
+    const audioElements = [audioRef.current, thudAudioRef.current, beepAudioRef.current, clickAudioRef.current];
+    
+    audioElements.forEach(audio => {
+      if (audio) {
+        audio.volume = 1.0;
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }).catch(err => {
+          console.log('Safari audio unlock failed:', err);
+        });
+      }
+    });
+
+    audioUnlocked.current = true;
+  };
+
   const handleStart = () => {
+    // Unlock audio on first user interaction
+    unlockAudio();
+    
     if (!isRunning && totalSeconds === 0) {
       const now = new Date();
       setStartTime(now.toLocaleString());
