@@ -311,18 +311,6 @@ export default function CPRTracker() {
   }, [bannerEvents, isRunning]);
 
   const handleStart = () => {
-    // Unlock audio on first user interaction (sync for iOS compatibility)
-    const audioElements = [audioRef.current, thudAudioRef.current, beepAudioRef.current, clickAudioRef.current];
-    audioElements.forEach(audio => {
-      if (audio) {
-        audio.volume = 1;
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-        }).catch(() => {});
-      }
-    });
-    
     if (!isRunning && totalSeconds === 0) {
       const now = new Date();
       setStartTime(now.toLocaleString());
@@ -372,10 +360,7 @@ export default function CPRTracker() {
   const playClickSound = () => {
     if (clickAudioRef.current) {
       clickAudioRef.current.currentTime = 0;
-      clickAudioRef.current.volume = 1;
-      clickAudioRef.current.play().catch((e) => {
-        console.log('Click sound failed:', e);
-      });
+      clickAudioRef.current.play().catch(() => {});
     }
   };
 
@@ -788,17 +773,11 @@ export default function CPRTracker() {
       {/* Hidden audio elements for alerts */}
       <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" />
       {/* Thud sound - low frequency for cycle transitions */}
-      <audio ref={thudAudioRef} preload="auto">
-        <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" type="audio/wav" />
-      </audio>
+      <audio ref={thudAudioRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" />
       {/* Beep sound - higher frequency alert */}
-      <audio ref={beepAudioRef} preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" type="audio/wav" />
-      </audio>
+      <audio ref={beepAudioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" />
       {/* Click sound - short confirmation */}
-      <audio ref={clickAudioRef} preload="auto">
-        <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" type="audio/wav" />
-      </audio>
+      <audio ref={clickAudioRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" />
       
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-6">
