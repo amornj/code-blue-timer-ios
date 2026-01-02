@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Play, Square, AlertTriangle, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import jsPDF from 'jspdf';
@@ -89,12 +90,82 @@ export default function CPRTracker() {
   const [outcome, setOutcome] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Audio refs
-  const audioRef = useRef(null);
-  const thudAudioRef = useRef(null);
-  const beepAudioRef = useRef(null);
-  const clickAudioRef = useRef(null);
+  // Audio context and refs
+  const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
+
+  // Initialize Web Audio API
+  useEffect(() => {
+    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
+
+  // Function to play beep using Web Audio API
+  const playBeep = useCallback((frequency = 800, duration = 100) => {
+    if (!soundEnabled || !audioContextRef.current) return;
+    
+    const ctx = audioContextRef.current;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.value = frequency;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration / 1000);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + duration / 1000);
+  }, [soundEnabled]);
+
+  // Function to play thud (low frequency)
+  const playThud = useCallback(() => {
+    if (!soundEnabled || !audioContextRef.current) return;
+    
+    const ctx = audioContextRef.current;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.value = 100;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.3);
+  }, [soundEnabled]);
+
+  // Function to play click (short high beep)
+  const playClick = useCallback(() => {
+    if (!soundEnabled || !audioContextRef.current) return;
+    
+    const ctx = audioContextRef.current;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.value = 1200;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.05);
+  }, [soundEnabled]);
 
   const formatCPRTime = useCallback((seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -240,9 +311,7 @@ export default function CPRTracker() {
           const newSeconds = prev + 1;
           if (newSeconds >= CYCLE_DURATION) {
             // Play alert sound
-            if (audioRef.current && soundEnabled) {
-              audioRef.current.play().catch(() => {});
-            }
+            playBeep(900, 150);
             return CYCLE_DURATION;
           }
           return newSeconds;
@@ -261,40 +330,31 @@ export default function CPRTracker() {
     
     const shouldPlayThud = (cycleSeconds >= 110 && cycleSeconds <= 120) || (cycleSeconds >= 0 && cycleSeconds <= 10);
     
-    if (shouldPlayThud && soundEnabled) {
+    if (shouldPlayThud) {
       const thudInterval = setInterval(() => {
-        if (thudAudioRef.current) {
-          thudAudioRef.current.currentTime = 0;
-          thudAudioRef.current.play().catch(() => {});
-        }
+        playThud();
       }, 1000);
       
       return () => clearInterval(thudInterval);
     }
-  }, [isRunning, cycleSeconds, soundEnabled]);
+  }, [isRunning, cycleSeconds, playThud]);
 
   // Beep sound effect for active alerts
   useEffect(() => {
     const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
     
-    if (hasActiveAlert && isRunning && soundEnabled) {
+    if (hasActiveAlert && isRunning) {
       // Clear any existing interval
       if (beepIntervalRef.current) {
         clearInterval(beepIntervalRef.current);
       }
       
       // Play beep immediately
-      if (beepAudioRef.current) {
-        beepAudioRef.current.currentTime = 0;
-        beepAudioRef.current.play().catch(() => {});
-      }
+      playBeep(800, 100);
       
       // Set up interval for continuous beeping
       beepIntervalRef.current = setInterval(() => {
-        if (beepAudioRef.current) {
-          beepAudioRef.current.currentTime = 0;
-          beepAudioRef.current.play().catch(() => {});
-        }
+        playBeep(800, 100);
       }, 2000);
       
       return () => {
@@ -310,7 +370,7 @@ export default function CPRTracker() {
         beepIntervalRef.current = null;
       }
     }
-  }, [bannerEvents, isRunning, soundEnabled]);
+  }, [bannerEvents, isRunning, playBeep]);
 
   const handleStart = () => {
     if (!isRunning && totalSeconds === 0) {
@@ -362,15 +422,10 @@ export default function CPRTracker() {
     setUsedProcedures([]);
   };
 
-  const playClickSound = () => {
-    if (clickAudioRef.current && soundEnabled) {
-      clickAudioRef.current.currentTime = 0;
-      clickAudioRef.current.play().catch(() => {});
-    }
-  };
+
 
   const handleConfirmCompressorChange = () => {
-    playClickSound();
+    playClick();
     const newCount = compressorChanges + 1;
     setCompressorChanges(newCount);
     if (lucasActive) {
@@ -392,7 +447,7 @@ export default function CPRTracker() {
   };
 
   const handleConfirmPulseCheck = () => {
-    playClickSound();
+    playClick();
     const newCount = pulseChecks + 1;
     setPulseChecks(newCount);
     addEvent('pulse', `Pulse check performed (Cycle ${currentCycle})`);
@@ -405,7 +460,7 @@ export default function CPRTracker() {
   };
 
   const handleConfirmAdrenaline = () => {
-    playClickSound();
+    playClick();
     setAdrenalineCount(prev => prev + 1);
     setLastAdrenalineTime(totalSeconds);
     setAdrenalineDue(false);
@@ -417,7 +472,7 @@ export default function CPRTracker() {
   };
 
   const handleConfirmAmiodarone = (dose) => {
-    playClickSound();
+    playClick();
     setAmiodaroneTotal(prev => prev + dose);
     if (dose === 300) {
       setAmiodarone300Due(false);
@@ -428,7 +483,7 @@ export default function CPRTracker() {
   };
 
   const handleConfirmLidocaine = (dose) => {
-    playClickSound();
+    playClick();
     setLidocaineCumulativeDose(prev => prev + dose);
     setLastLidocaineTime(totalSeconds);
     if (dose === 1.5) {
@@ -528,7 +583,7 @@ export default function CPRTracker() {
   };
 
   const handleShockDelivered = (energy) => {
-    playClickSound();
+    playClick();
     setShockCount(prev => prev + 1);
     setShocksInCurrentShockableRhythm(prev => prev + 1);
     
@@ -775,15 +830,7 @@ export default function CPRTracker() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-6">
-      {/* Hidden audio elements for alerts */}
-      <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" />
-      {/* Thud sound - low frequency for cycle transitions */}
-      <audio ref={thudAudioRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" />
-      {/* Beep sound - higher frequency alert */}
-      <audio ref={beepAudioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" />
-      {/* Click sound - short confirmation */}
-      <audio ref={clickAudioRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" />
-      
+
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -795,20 +842,17 @@ export default function CPRTracker() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-            {/* Sound Toggle */}
-            <div className="flex items-center gap-2 bg-slate-800 rounded-lg px-4 py-2 border border-slate-700">
+            {/* Sound Toggle Switch */}
+            <div className="flex items-center gap-3 bg-slate-800 rounded-lg px-4 py-2.5 border border-slate-700">
               <span className={`text-sm font-medium ${soundEnabled ? 'text-green-400' : 'text-slate-400'}`}>
-                {soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
+                {soundEnabled ? '🔊 Sound' : '🔇 Sound'}
               </span>
-              <Button
-                onClick={() => setSoundEnabled(!soundEnabled)}
+              <Switch
+                checked={soundEnabled}
+                onCheckedChange={setSoundEnabled}
                 disabled={!hasStarted}
-                variant="outline"
-                size="sm"
-                className={`${soundEnabled ? 'bg-green-600 hover:bg-green-700 border-green-500 text-white' : 'bg-slate-700 hover:bg-slate-600 border-slate-600 text-slate-300'} disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {soundEnabled ? 'Disable' : 'Enable'}
-              </Button>
+                className="data-[state=checked]:bg-green-600"
+              />
             </div>
 
             {totalSeconds === 0 ? (
