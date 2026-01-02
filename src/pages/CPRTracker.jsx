@@ -299,23 +299,7 @@ export default function CPRTracker() {
     }
   }, []);
 
-  // Thud sound effect for cycle transitions (110-120s and 0-10s)
-  useEffect(() => {
-    if (!isRunning) return;
-    
-    const shouldPlayThud = (cycleSeconds >= 110 && cycleSeconds <= 120) || (cycleSeconds >= 0 && cycleSeconds <= 10);
-    
-    if (shouldPlayThud) {
-      const thudInterval = setInterval(() => {
-        if (thudAudioRef.current) {
-          thudAudioRef.current.currentTime = 0;
-          thudAudioRef.current.play().catch(() => {});
-        }
-      }, 1000);
-      
-      return () => clearInterval(thudInterval);
-    }
-  }, [isRunning, cycleSeconds]);
+  // Thud sound removed - only keeping beep alerts
 
   // Beep sound effect for active alerts (using Web Audio API)
   useEffect(() => {
