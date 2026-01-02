@@ -892,6 +892,9 @@ export default function CPRTracker() {
           adrenalineCount={adrenalineCount}
           amiodaroneTotal={amiodaroneTotal}
           lidocaineCumulativeDose={lidocaineCumulativeDose}
+          soundEnabled={soundEnabled}
+          onSoundToggle={setSoundEnabled}
+          hasStarted={hasStarted}
         />
 
         {/* Rhythm Selector */}

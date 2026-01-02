@@ -1,7 +1,8 @@
 import React from 'react';
 import { RefreshCw, Zap, Syringe, Clock } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
-export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0 }) {
+export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted }) {
   const progress = (cycleSeconds / 120) * 100;
   const remainingSeconds = 120 - cycleSeconds;
   
@@ -20,7 +21,20 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
         : 'bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700'
     }`}>
       {/* Total CPR Time */}
-      <div className="mb-6 text-center">
+      <div className="mb-6 text-center relative">
+        {/* Sound Toggle - Top Right */}
+        <div className="absolute top-0 right-0 flex flex-col items-center gap-1.5">
+          <span className={`text-xs font-semibold uppercase tracking-wider ${soundEnabled ? 'text-green-400' : 'text-slate-400'}`}>
+            SOUND
+          </span>
+          <Switch
+            checked={soundEnabled}
+            onCheckedChange={onSoundToggle}
+            disabled={!hasStarted}
+            className="data-[state=checked]:bg-green-600"
+          />
+        </div>
+
         <div className="flex items-center justify-center gap-2 mb-2">
           <Clock className="w-5 h-5 text-slate-400" />
           <span className="text-sm font-medium tracking-wide uppercase text-slate-400">
