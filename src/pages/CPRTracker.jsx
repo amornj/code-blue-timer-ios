@@ -34,6 +34,7 @@ export default function CPRTracker() {
   // Session state
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false); // Track if CPR has been started
+  const [soundEnabled, setSoundEnabled] = useState(false); // Sound toggle
   const [totalSeconds, setTotalSeconds] = useState(0);
   const [cycleSeconds, setCycleSeconds] = useState(0);
   const [currentCycle, setCurrentCycle] = useState(1);
@@ -239,7 +240,7 @@ export default function CPRTracker() {
           const newSeconds = prev + 1;
           if (newSeconds >= CYCLE_DURATION) {
             // Play alert sound
-            if (audioRef.current) {
+            if (audioRef.current && soundEnabled) {
               audioRef.current.play().catch(() => {});
             }
             return CYCLE_DURATION;
@@ -260,7 +261,7 @@ export default function CPRTracker() {
     
     const shouldPlayThud = (cycleSeconds >= 110 && cycleSeconds <= 120) || (cycleSeconds >= 0 && cycleSeconds <= 10);
     
-    if (shouldPlayThud) {
+    if (shouldPlayThud && soundEnabled) {
       const thudInterval = setInterval(() => {
         if (thudAudioRef.current) {
           thudAudioRef.current.currentTime = 0;
@@ -270,13 +271,13 @@ export default function CPRTracker() {
       
       return () => clearInterval(thudInterval);
     }
-  }, [isRunning, cycleSeconds]);
+  }, [isRunning, cycleSeconds, soundEnabled]);
 
   // Beep sound effect for active alerts
   useEffect(() => {
     const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
     
-    if (hasActiveAlert && isRunning) {
+    if (hasActiveAlert && isRunning && soundEnabled) {
       // Clear any existing interval
       if (beepIntervalRef.current) {
         clearInterval(beepIntervalRef.current);
@@ -309,7 +310,7 @@ export default function CPRTracker() {
         beepIntervalRef.current = null;
       }
     }
-  }, [bannerEvents, isRunning]);
+  }, [bannerEvents, isRunning, soundEnabled]);
 
   const handleStart = () => {
     if (!isRunning && totalSeconds === 0) {
@@ -328,6 +329,7 @@ export default function CPRTracker() {
   const handleReset = () => {
     setIsRunning(false);
     setHasStarted(false);
+    setSoundEnabled(false);
     setTotalSeconds(0);
     setCycleSeconds(0);
     setCurrentCycle(1);
@@ -361,7 +363,7 @@ export default function CPRTracker() {
   };
 
   const playClickSound = () => {
-    if (clickAudioRef.current) {
+    if (clickAudioRef.current && soundEnabled) {
       clickAudioRef.current.currentTime = 0;
       clickAudioRef.current.play().catch(() => {});
     }
@@ -793,6 +795,22 @@ export default function CPRTracker() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
+            {/* Sound Toggle */}
+            <div className="flex items-center gap-2 bg-slate-800 rounded-lg px-4 py-2 border border-slate-700">
+              <span className={`text-sm font-medium ${soundEnabled ? 'text-green-400' : 'text-slate-400'}`}>
+                {soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
+              </span>
+              <Button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                disabled={!hasStarted}
+                variant="outline"
+                size="sm"
+                className={`${soundEnabled ? 'bg-green-600 hover:bg-green-700 border-green-500 text-white' : 'bg-slate-700 hover:bg-slate-600 border-slate-600 text-slate-300'} disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {soundEnabled ? 'Disable' : 'Enable'}
+              </Button>
+            </div>
+
             {totalSeconds === 0 ? (
               <Button 
                 onClick={handleStart}
