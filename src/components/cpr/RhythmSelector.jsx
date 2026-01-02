@@ -16,7 +16,7 @@ const NON_SHOCKABLE_RHYTHMS = [
 
 const ENERGY_OPTIONS = [120, 150, 200, 250, 300, 360];
 
-export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle, isRunning }) {
+export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle, isRunning, disabled = false }) {
   const isShockable = SHOCKABLE_RHYTHMS.some(r => r.id === currentRhythm);
   const [showShockDialog, setShowShockDialog] = useState(false);
   const [selectedEnergy, setSelectedEnergy] = useState(200);
