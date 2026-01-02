@@ -310,45 +310,33 @@ export default function CPRTracker() {
     }
   }, [bannerEvents, isRunning]);
 
-  const handleStart = () => {
+  const unlockAllAudio = async () => {
+    // Unlock all audio elements for mobile browsers (iOS/Android)
+    const audioElements = [audioRef.current, thudAudioRef.current, beepAudioRef.current, clickAudioRef.current];
+    
+    for (const audio of audioElements) {
+      if (audio) {
+        try {
+          audio.volume = 1;
+          await audio.play();
+          audio.pause();
+          audio.currentTime = 0;
+          console.log('Audio unlocked successfully');
+        } catch (e) {
+          console.log('Audio unlock attempt:', e);
+        }
+      }
+    }
+  };
+
+  const handleStart = async () => {
+    // Unlock audio on first user interaction
+    await unlockAllAudio();
+    
     if (!isRunning && totalSeconds === 0) {
       const now = new Date();
       setStartTime(now.toLocaleString());
       addEvent('start', 'CPR Session Started');
-      
-      // Unlock audio on first user interaction (required for mobile browsers)
-      if (audioRef.current) {
-        audioRef.current.volume = 0;
-        audioRef.current.play().then(() => {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-          audioRef.current.volume = 1;
-        }).catch(() => {});
-      }
-      if (thudAudioRef.current) {
-        thudAudioRef.current.volume = 0;
-        thudAudioRef.current.play().then(() => {
-          thudAudioRef.current.pause();
-          thudAudioRef.current.currentTime = 0;
-          thudAudioRef.current.volume = 1;
-        }).catch(() => {});
-      }
-      if (beepAudioRef.current) {
-        beepAudioRef.current.volume = 0;
-        beepAudioRef.current.play().then(() => {
-          beepAudioRef.current.pause();
-          beepAudioRef.current.currentTime = 0;
-          beepAudioRef.current.volume = 1;
-        }).catch(() => {});
-      }
-      if (clickAudioRef.current) {
-        clickAudioRef.current.volume = 0;
-        clickAudioRef.current.play().then(() => {
-          clickAudioRef.current.pause();
-          clickAudioRef.current.currentTime = 0;
-          clickAudioRef.current.volume = 1;
-        }).catch(() => {});
-      }
     }
     setIsRunning(true);
   };
@@ -394,7 +382,10 @@ export default function CPRTracker() {
   const playClickSound = () => {
     if (clickAudioRef.current) {
       clickAudioRef.current.currentTime = 0;
-      clickAudioRef.current.play().catch(() => {});
+      clickAudioRef.current.volume = 1;
+      clickAudioRef.current.play().catch((e) => {
+        console.log('Click sound failed:', e);
+      });
     }
   };
 
@@ -807,14 +798,25 @@ export default function CPRTracker() {
       {/* Hidden audio elements for alerts */}
       <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" />
       {/* Thud sound - low frequency for cycle transitions */}
-      <audio ref={thudAudioRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" />
+      <audio ref={thudAudioRef} preload="auto">
+        <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" type="audio/wav" />
+      </audio>
       {/* Beep sound - higher frequency alert */}
-      <audio ref={beepAudioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" />
+      <audio ref={beepAudioRef} preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2eleXFxgXhre25ycGpmc2llTj1IXHiLlot9cWdiYW9/jIyGgYGEh4eDenNyfH2BeXBnYGZpb3V6fHx7fIKHjIqDe3Rva3B3foSKjoWBeYCGkpqWinpqbnh+hIuUl5WVl5qYko1+b2dndYWQmJmUjomKj5eajYB6fIWSmZiOgXp9h5CRhHRvdoSQmZqOgnl4gIiKfnFyhZqrpY91YmNygoqNjYmHh42SmI+Ab21vd4OQnKGelYqAfoKGhHdubnV/iJKamJWTkpSSjYZ9dXBzeoaQmJmVjoeGipCUjoVybG10gY2Zn5yVjYmKjpGNgXRta3SDkJqdmJKNi46SlIp6" type="audio/wav" />
+      </audio>
       {/* Click sound - short confirmation */}
-      <audio ref={clickAudioRef} src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" />
+      <audio ref={clickAudioRef} preload="auto">
+        <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=" type="audio/wav" />
+      </audio>
       
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-6">
+        {totalSeconds === 0 && (
+          <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-3 mb-4 text-amber-300 text-sm text-center">
+            📱 Tap "Start CPR" button to enable alarm sounds on mobile devices
+          </div>
+        )}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
