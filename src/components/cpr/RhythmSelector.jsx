@@ -16,7 +16,7 @@ const NON_SHOCKABLE_RHYTHMS = [
 
 const ENERGY_OPTIONS = [120, 150, 200, 250, 300, 360];
 
-export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle, isRunning, disabled = false }) {
+export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle, isRunning }) {
   const isShockable = SHOCKABLE_RHYTHMS.some(r => r.id === currentRhythm);
   const [showShockDialog, setShowShockDialog] = useState(false);
   const [selectedEnergy, setSelectedEnergy] = useState(200);
@@ -62,8 +62,8 @@ export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, on
                     ? 'bg-red-600 hover:bg-red-700 border-red-500 text-white shadow-lg shadow-red-500/30' 
                     : 'border-red-800 text-red-400 hover:bg-red-900/50 hover:border-red-600'
                 }`}
-                onClick={() => !disabled && rhythmSelectionStage === 'unselected' && onRhythmChange(rhythm.id)}
-                disabled={disabled || (rhythmSelectionStage === 'selected' && currentRhythm !== rhythm.id)}
+                onClick={() => rhythmSelectionStage === 'unselected' && onRhythmChange(rhythm.id)}
+                disabled={rhythmSelectionStage === 'selected' && currentRhythm !== rhythm.id}
               >
                 {rhythm.label}
               </Button>
@@ -87,8 +87,8 @@ export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, on
                     ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
                     : 'border-blue-800 text-blue-400 hover:bg-blue-900/50 hover:border-blue-600'
                 }`}
-                onClick={() => !disabled && rhythmSelectionStage === 'unselected' && onRhythmChange(rhythm.id)}
-                disabled={disabled || (rhythmSelectionStage === 'selected' && currentRhythm !== rhythm.id)}
+                onClick={() => rhythmSelectionStage === 'unselected' && onRhythmChange(rhythm.id)}
+                disabled={rhythmSelectionStage === 'selected' && currentRhythm !== rhythm.id}
               >
                 {rhythm.label}
               </Button>
@@ -115,7 +115,7 @@ export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, on
         {isShockable && (
           <Button
             onClick={() => setShowShockDialog(true)}
-            disabled={disabled || shockDeliveredThisCycle}
+            disabled={shockDeliveredThisCycle}
             className={`w-full h-16 text-lg font-bold rounded-xl ${
               shockDeliveredThisCycle
                 ? 'bg-slate-700 text-slate-500 cursor-not-allowed'

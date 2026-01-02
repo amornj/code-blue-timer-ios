@@ -89,27 +89,15 @@ export default function Records() {
   };
 
   const handleSaveEdit = async () => {
-    try {
-      await base44.entities.CPRSession.update(editingRecord.id, editForm);
-      setEditingRecord(null);
-      refetch();
-    } catch (error) {
-      alert('Error: Record not found or could not be updated. The page will refresh.');
-      setEditingRecord(null);
-      refetch();
-    }
+    await base44.entities.CPRSession.update(editingRecord.id, editForm);
+    setEditingRecord(null);
+    refetch();
   };
 
   const handleDelete = async () => {
-    try {
-      await base44.entities.CPRSession.delete(deletingRecord.id);
-      setDeletingRecord(null);
-      refetch();
-    } catch (error) {
-      alert('Error: Record not found or already deleted. The page will refresh.');
-      setDeletingRecord(null);
-      refetch();
-    }
+    await base44.entities.CPRSession.delete(deletingRecord.id);
+    setDeletingRecord(null);
+    refetch();
   };
 
   const formatDuration = (seconds) => {
@@ -216,13 +204,6 @@ export default function Records() {
   };
 
   const exportSingleRecordPDF = (record) => {
-    if (!record) {
-      alert('Error: Record not found. The page will refresh.');
-      refetch();
-      setReportDialog(null);
-      return;
-    }
-    
     const formatOutcome = (outcome) => {
       switch (outcome) {
         case 'ROSC_following': return 'ROSC, and following command';

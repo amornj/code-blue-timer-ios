@@ -87,15 +87,12 @@ export default function CPRTracker() {
   const [outcome, setOutcome] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Audio refs and state
+  // Audio refs
   const audioRef = useRef(null);
   const thudAudioRef = useRef(null);
   const beepAudioRef = useRef(null);
   const clickAudioRef = useRef(null);
   const beepIntervalRef = useRef(null);
-  const audioUnlocked = useRef(false);
-  const audioContextRef = useRef(null);
-  const [audioEnabled, setAudioEnabled] = useState(null); // null = unknown, true = enabled, false = blocked
 
   const formatCPRTime = useCallback((seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -256,52 +253,25 @@ export default function CPRTracker() {
     };
   }, [isRunning]);
 
-  // Function to play beep using Web Audio API (more reliable on Safari)
-  const playBeepSound = useCallback(() => {
-    if (!audioContextRef.current || !audioUnlocked.current) {
-      console.log('Beep skipped - audio not ready:', { 
-        hasContext: !!audioContextRef.current, 
-        unlocked: audioUnlocked.current 
-      });
-      return;
+  // Thud sound effect for cycle transitions (110-120s and 0-10s)
+  useEffect(() => {
+    if (!isRunning) return;
+    
+    const shouldPlayThud = (cycleSeconds >= 110 && cycleSeconds <= 120) || (cycleSeconds >= 0 && cycleSeconds <= 10);
+    
+    if (shouldPlayThud) {
+      const thudInterval = setInterval(() => {
+        if (thudAudioRef.current) {
+          thudAudioRef.current.currentTime = 0;
+          thudAudioRef.current.play().catch(() => {});
+        }
+      }, 1000);
+      
+      return () => clearInterval(thudInterval);
     }
+  }, [isRunning, cycleSeconds]);
 
-    try {
-      const ctx = audioContextRef.current;
-      
-      // Resume if suspended (iOS background)
-      if (ctx.state === 'suspended') {
-        ctx.resume().then(() => {
-          console.log('Audio context resumed');
-        });
-      }
-
-      // Create oscillator
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      
-      oscillator.frequency.value = 800; // 800 Hz beep
-      oscillator.type = 'sine';
-      
-      // Set volume envelope
-      gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.4);
-      
-      console.log('Beep played successfully');
-    } catch (err) {
-      console.error('Beep sound failed:', err);
-    }
-  }, []);
-
-  // Thud sound removed - only keeping beep alerts
-
-  // Beep sound effect for active alerts (using Web Audio API)
+  // Beep sound effect for active alerts
   useEffect(() => {
     const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
     
@@ -312,11 +282,17 @@ export default function CPRTracker() {
       }
       
       // Play beep immediately
-      playBeepSound();
+      if (beepAudioRef.current) {
+        beepAudioRef.current.currentTime = 0;
+        beepAudioRef.current.play().catch(() => {});
+      }
       
       // Set up interval for continuous beeping
       beepIntervalRef.current = setInterval(() => {
-        playBeepSound();
+        if (beepAudioRef.current) {
+          beepAudioRef.current.currentTime = 0;
+          beepAudioRef.current.play().catch(() => {});
+        }
       }, 2000);
       
       return () => {
@@ -332,87 +308,9 @@ export default function CPRTracker() {
         beepIntervalRef.current = null;
       }
     }
-  }, [bannerEvents, isRunning, playBeepSound]);
-
-  const unlockAudio = async () => {
-    if (audioUnlocked.current) return;
-
-    try {
-      // Create Web Audio API context
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-
-      // Resume audio context if suspended (Safari requirement)
-      if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume();
-      }
-
-      // Play a brief audible sound to unlock (Safari needs audible feedback)
-      const oscillator = audioContextRef.current.createOscillator();
-      const gainNode = audioContextRef.current.createGain();
-      gainNode.gain.value = 0.15; // Audible
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContextRef.current.destination);
-      oscillator.frequency.value = 440; // A4 note
-      oscillator.type = 'sine';
-      oscillator.start(audioContextRef.current.currentTime);
-      oscillator.stop(audioContextRef.current.currentTime + 0.1);
-
-      // Wait for sound to finish
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      // Also unlock regular audio elements
-      const audioElements = [audioRef.current, thudAudioRef.current, beepAudioRef.current, clickAudioRef.current];
-      for (const audio of audioElements) {
-        if (audio) {
-          audio.volume = 1.0;
-          try {
-            await audio.play();
-            audio.pause();
-            audio.currentTime = 0;
-          } catch (err) {
-            console.log('Audio unlock failed:', err);
-          }
-        }
-      }
-
-      // Mark as unlocked and update state
-      audioUnlocked.current = true;
-      
-      // Force state update after a brief delay to ensure it renders
-      setTimeout(() => {
-        setAudioEnabled(true);
-      }, 200);
-
-    } catch (err) {
-      console.error('Audio unlock failed:', err);
-      setAudioEnabled(false);
-    }
-  };
-
-  // Handle visibility changes (Safari background/foreground)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && audioContextRef.current) {
-        // Resume audio context when app comes back to foreground
-        if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(err => {
-            console.error('Failed to resume audio context:', err);
-          });
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  }, [bannerEvents, isRunning]);
 
   const handleStart = () => {
-    // Unlock audio on first user interaction
-    unlockAudio();
-    
     if (!isRunning && totalSeconds === 0) {
       const now = new Date();
       setStartTime(now.toLocaleString());
@@ -892,17 +790,6 @@ export default function CPRTracker() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-            {/* Audio Status Indicator */}
-            {audioEnabled !== null && (
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium ${
-                audioEnabled 
-                  ? 'bg-green-900/50 text-green-400 border border-green-700' 
-                  : 'bg-red-900/50 text-red-400 border border-red-700'
-              }`}>
-                {audioEnabled ? '🔊 Sound enabled' : '🔇 Sound blocked'}
-              </div>
-            )}
-            
             {totalSeconds === 0 ? (
               <Button 
                 onClick={handleStart}
@@ -964,7 +851,6 @@ export default function CPRTracker() {
           shockCount={shockCount}
           shockDeliveredThisCycle={shockDeliveredThisCycle}
           isRunning={isRunning}
-          disabled={totalSeconds === 0}
         />
 
         {/* Event Banners */}
@@ -978,14 +864,13 @@ export default function CPRTracker() {
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
           lucasActive={lucasActive}
           onToggleLucas={handleToggleLucas}
-          disabled={totalSeconds === 0}
         />
 
         {/* Common Medications */}
-        <CommonMedications onAddMedication={handleAddDiscretionaryMed} medicationCounts={medicationCounts} disabled={totalSeconds === 0} />
+        <CommonMedications onAddMedication={handleAddDiscretionaryMed} medicationCounts={medicationCounts} />
 
         {/* Common Procedures */}
-        <CommonProcedures onAddProcedure={handleAddProcedure} usedProcedures={usedProcedures} disabled={totalSeconds === 0} />
+        <CommonProcedures onAddProcedure={handleAddProcedure} usedProcedures={usedProcedures} />
 
         {/* Event Log */}
         <EventLog events={events} />
@@ -1002,8 +887,7 @@ export default function CPRTracker() {
               placeholder="text"
               maxLength={200}
               rows={4}
-              disabled={totalSeconds === 0}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <div className="text-xs text-slate-500 mt-1 text-right">
               {doctorNotes.length}/200 characters
