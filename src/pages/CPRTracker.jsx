@@ -87,13 +87,15 @@ export default function CPRTracker() {
   const [outcome, setOutcome] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Audio refs
+  // Audio refs and state
   const audioRef = useRef(null);
   const thudAudioRef = useRef(null);
   const beepAudioRef = useRef(null);
   const clickAudioRef = useRef(null);
   const beepIntervalRef = useRef(null);
   const audioUnlocked = useRef(false);
+  const audioContextRef = useRef(null);
+  const [audioEnabled, setAudioEnabled] = useState(null); // null = unknown, true = enabled, false = blocked
 
   const formatCPRTime = useCallback((seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -272,7 +274,7 @@ export default function CPRTracker() {
     }
   }, [isRunning, cycleSeconds]);
 
-  // Beep sound effect for active alerts
+  // Beep sound effect for active alerts (using Web Audio API)
   useEffect(() => {
     const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
     
@@ -283,17 +285,11 @@ export default function CPRTracker() {
       }
       
       // Play beep immediately
-      if (beepAudioRef.current) {
-        beepAudioRef.current.currentTime = 0;
-        beepAudioRef.current.play().catch(() => {});
-      }
+      playBeepSound();
       
       // Set up interval for continuous beeping
       beepIntervalRef.current = setInterval(() => {
-        if (beepAudioRef.current) {
-          beepAudioRef.current.currentTime = 0;
-          beepAudioRef.current.play().catch(() => {});
-        }
+        playBeepSound();
       }, 2000);
       
       return () => {
@@ -309,28 +305,100 @@ export default function CPRTracker() {
         beepIntervalRef.current = null;
       }
     }
-  }, [bannerEvents, isRunning]);
+  }, [bannerEvents, isRunning, playBeepSound]);
 
-  const unlockAudio = () => {
+  const unlockAudio = async () => {
     if (audioUnlocked.current) return;
 
-    // Unlock all audio elements for Safari
-    const audioElements = [audioRef.current, thudAudioRef.current, beepAudioRef.current, clickAudioRef.current];
-    
-    audioElements.forEach(audio => {
-      if (audio) {
-        audio.volume = 1.0;
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-        }).catch(err => {
-          console.log('Safari audio unlock failed:', err);
-        });
+    try {
+      // Create Web Audio API context
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext();
       }
-    });
 
-    audioUnlocked.current = true;
+      // Resume audio context if suspended (Safari requirement)
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+
+      // Play a silent sound to unlock
+      const oscillator = audioContextRef.current.createOscillator();
+      const gainNode = audioContextRef.current.createGain();
+      gainNode.gain.value = 0.001; // Very quiet
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContextRef.current.destination);
+      oscillator.start(0);
+      oscillator.stop(audioContextRef.current.currentTime + 0.01);
+
+      // Also unlock regular audio elements
+      const audioElements = [audioRef.current, thudAudioRef.current, beepAudioRef.current, clickAudioRef.current];
+      for (const audio of audioElements) {
+        if (audio) {
+          audio.volume = 1.0;
+          try {
+            await audio.play();
+            audio.pause();
+            audio.currentTime = 0;
+          } catch (err) {
+            console.log('Audio unlock failed:', err);
+          }
+        }
+      }
+
+      audioUnlocked.current = true;
+      setAudioEnabled(true);
+    } catch (err) {
+      console.error('Audio unlock failed:', err);
+      setAudioEnabled(false);
+    }
   };
+
+  // Function to play beep using Web Audio API (more reliable on Safari)
+  const playBeepSound = useCallback(() => {
+    if (!audioContextRef.current || !audioUnlocked.current) return;
+
+    try {
+      const ctx = audioContextRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.frequency.value = 800; // 800 Hz beep
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.3);
+    } catch (err) {
+      console.error('Beep sound failed:', err);
+    }
+  }, []);
+
+  // Handle visibility changes (Safari background/foreground)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && audioContextRef.current) {
+        // Resume audio context when app comes back to foreground
+        if (audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume().catch(err => {
+            console.error('Failed to resume audio context:', err);
+          });
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   const handleStart = () => {
     // Unlock audio on first user interaction
@@ -815,6 +883,17 @@ export default function CPRTracker() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
+            {/* Audio Status Indicator */}
+            {audioEnabled !== null && (
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium ${
+                audioEnabled 
+                  ? 'bg-green-900/50 text-green-400 border border-green-700' 
+                  : 'bg-red-900/50 text-red-400 border border-red-700'
+              }`}>
+                {audioEnabled ? '🔊 Sound enabled' : '🔇 Sound blocked'}
+              </div>
+            )}
+            
             {totalSeconds === 0 ? (
               <Button 
                 onClick={handleStart}
