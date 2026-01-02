@@ -51,7 +51,7 @@ const CAUSES_6H6T = [
   'Thrombosis (myocardial infarction)'
 ];
 
-export default function CommonProcedures({ onAddProcedure, usedProcedures = [] }) {
+export default function CommonProcedures({ onAddProcedure, usedProcedures = [], disabled = false }) {
   const [show6H6T, setShow6H6T] = useState(false);
 
   const handleProcedureClick = (proc) => {
@@ -84,9 +84,9 @@ export default function CommonProcedures({ onAddProcedure, usedProcedures = [] }
               <Button
                 key={proc.short}
                 onClick={() => handleProcedureClick(proc)}
-                disabled={isDisabled}
+                disabled={disabled || isDisabled}
                 className={`h-14 text-base font-bold ${
-                  isDisabled 
+                  (disabled || isDisabled) 
                     ? 'bg-slate-700 text-slate-500 cursor-not-allowed' 
                     : proc.color
                 } text-white`}
