@@ -256,6 +256,35 @@ export default function CPRTracker() {
     };
   }, [isRunning]);
 
+  // Function to play beep using Web Audio API (more reliable on Safari)
+  const playBeepSound = useCallback(() => {
+    if (!audioContextRef.current || !audioUnlocked.current) return;
+
+    try {
+      const ctx = audioContextRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.frequency.value = 800; // 800 Hz beep
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.3);
+    } catch (err) {
+      console.error('Beep sound failed:', err);
+    }
+  }, []);
+
   // Thud sound effect for cycle transitions (110-120s and 0-10s)
   useEffect(() => {
     if (!isRunning) return;
@@ -306,35 +335,6 @@ export default function CPRTracker() {
       }
     }
   }, [bannerEvents, isRunning, playBeepSound]);
-
-  // Function to play beep using Web Audio API (more reliable on Safari)
-  const playBeepSound = useCallback(() => {
-    if (!audioContextRef.current || !audioUnlocked.current) return;
-
-    try {
-      const ctx = audioContextRef.current;
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      
-      oscillator.frequency.value = 800; // 800 Hz beep
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.3);
-    } catch (err) {
-      console.error('Beep sound failed:', err);
-    }
-  }, []);
 
   const unlockAudio = async () => {
     if (audioUnlocked.current) return;
