@@ -1,6 +1,6 @@
 // Sarabun Thai Font for jsPDF
 // This is a minimal font data module - in production, you'd embed the full base64 font data
-
+/*
 export const addThaiFont = (doc) => {
   // For now, we'll use the default font with better Thai character support
   // by setting the font to use UTF-8 encoding
@@ -14,7 +14,7 @@ export const addThaiFont = (doc) => {
   
   return doc;
 };
-
+*/
 // Placeholder for future full Thai font implementation
 // Once you have the base64 font data, replace the above function with:
 
