@@ -699,11 +699,6 @@ export default function CPRTracker() {
       : 'Ongoing - CPR in progress';
 
     const doc = new jsPDF();
-    
-    // Add Thai font support
-    doc.addFileToVFS('THSarabunNew.ttf', 'AAEAAAALAIAAAwAwT1MvMg8SBfAAAAC8AAAAYGNtYXABDgABAAA...');
-    doc.addFont('THSarabunNew.ttf', 'THSarabunNew', 'normal');
-    doc.setFont('THSarabunNew');
     let yPos = 20;
 
     // Title
