@@ -371,7 +371,7 @@ export default function Records() {
       yPos = doc.lastAutoTable.finalY + 8;
     }
 
-    // Notes section
+    // Notes section - wrap text properly within A4 margins
     if (record.doctor_notes) {
       if (yPos > 250) {
         doc.addPage();
@@ -379,11 +379,11 @@ export default function Records() {
       }
       doc.setFontSize(11);
       doc.text('Note1 (During CPR)', 15, yPos);
-      yPos += 5;
-      doc.setFontSize(8);
-      const splitNotes = doc.splitTextToSize(record.doctor_notes, 180);
+      yPos += 6;
+      doc.setFontSize(9);
+      const splitNotes = doc.splitTextToSize(record.doctor_notes, 170);
       doc.text(splitNotes, 15, yPos);
-      yPos += splitNotes.length * 4 + 5;
+      yPos += splitNotes.length * 5 + 6;
     }
 
     if (record.notes) {
@@ -393,11 +393,11 @@ export default function Records() {
       }
       doc.setFontSize(11);
       doc.text('Note2 (End Session)', 15, yPos);
-      yPos += 5;
-      doc.setFontSize(8);
-      const splitNote2 = doc.splitTextToSize(record.notes, 180);
+      yPos += 6;
+      doc.setFontSize(9);
+      const splitNote2 = doc.splitTextToSize(record.notes, 170);
       doc.text(splitNote2, 15, yPos);
-      yPos += splitNote2.length * 4 + 5;
+      yPos += splitNote2.length * 5 + 6;
     }
 
     if (record.post_cpr_notes) {
@@ -407,9 +407,9 @@ export default function Records() {
       }
       doc.setFontSize(11);
       doc.text('Note3 (Post CPR)', 15, yPos);
-      yPos += 5;
-      doc.setFontSize(8);
-      const splitNote3 = doc.splitTextToSize(record.post_cpr_notes, 180);
+      yPos += 6;
+      doc.setFontSize(9);
+      const splitNote3 = doc.splitTextToSize(record.post_cpr_notes, 170);
       doc.text(splitNote3, 15, yPos);
     }
 
