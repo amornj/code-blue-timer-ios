@@ -506,12 +506,7 @@ export default function CPRTracker() {
     setDiscretionaryMeds(prev => [...prev, medEntry]);
     addEvent('discretionary_med', `${medication} - ${dosage} administered`, { medication, dosage });
     
-    // Show toast notification
-    toast.success(`${medication} administered`, {
-      duration: 2000,
-    });
-    
-    // Update medication counter - map short names to full medication names
+    // Update medication counter
     const medMapping = {
       'Bicarb': 'Sodium Bicarbonate',
       'Ca': 'Calcium',
@@ -532,6 +527,29 @@ export default function CPRTracker() {
         [shortName]: (prev[shortName] || 0) + 1
       }));
     }
+    
+    // Show toast notification with undo
+    toast.success(`${medication} administered`, {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          // Remove the last added med entry
+          setDiscretionaryMeds(prev => prev.slice(0, -1));
+          // Remove the last event
+          setEvents(prev => prev.slice(0, -1));
+          // Decrement counter
+          if (matchedMed) {
+            const [shortName] = matchedMed;
+            setMedicationCounts(prev => ({
+              ...prev,
+              [shortName]: Math.max((prev[shortName] || 1) - 1, 0)
+            }));
+          }
+        }
+      }
+    });
   };
 
   const handleAddProcedure = ({ procedure }) => {
@@ -544,12 +562,7 @@ export default function CPRTracker() {
     setDiscretionaryMeds(prev => [...prev, { medication: procedure, dosage: procedure, ...procEntry }]);
     addEvent('procedure', `${procedure}`, { procedure });
     
-    // Show toast notification
-    toast.success(`${procedure} performed`, {
-      duration: 2000,
-    });
-    
-    // Mark procedure as used - map short names to full procedure names
+    // Mark procedure as used
     const procMapping = {
       'A line': 'A line insertion',
       'Central line': 'Central line insertion',
@@ -561,12 +574,34 @@ export default function CPRTracker() {
       procedure.includes(full)
     );
     
+    let wasNew = false;
     if (matchedProc) {
       const [shortName] = matchedProc;
       if (!usedProcedures.includes(shortName)) {
         setUsedProcedures(prev => [...prev, shortName]);
+        wasNew = true;
       }
     }
+    
+    // Show toast notification with undo
+    toast.success(`${procedure} performed`, {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          // Remove the last added procedure entry
+          setDiscretionaryMeds(prev => prev.slice(0, -1));
+          // Remove the last event
+          setEvents(prev => prev.slice(0, -1));
+          // Remove from used procedures if it was newly added
+          if (matchedProc && wasNew) {
+            const [shortName] = matchedProc;
+            setUsedProcedures(prev => prev.filter(p => p !== shortName));
+          }
+        }
+      }
+    });
   };
 
   const handleRhythmChange = (rhythm) => {
@@ -841,7 +876,7 @@ export default function CPRTracker() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-6">
-      <Toaster position="top-center" richColors />
+      <Toaster position="bottom-center" richColors />
 
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-6">
@@ -960,15 +995,15 @@ export default function CPRTracker() {
             </label>
             <textarea
               value={doctorNotes}
-              onChange={(e) => setDoctorNotes(e.target.value.slice(0, 200))}
-              placeholder="text"
-              maxLength={200}
-              rows={4}
+              onChange={(e) => setDoctorNotes(e.target.value.slice(0, 400))}
+              placeholder="text or talk"
+              maxLength={400}
+              rows={6}
               disabled={!hasStarted}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <div className="text-xs text-slate-500 mt-1 text-right">
-              {doctorNotes.length}/200 characters
+              {doctorNotes.length}/400 characters
               </div>
               </div>
               </div>
