@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import JSZip from 'jszip';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { addThaiFont } from '@/components/pdf/ThaiFont';
 
 export default function Records() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -220,6 +221,7 @@ export default function Records() {
     };
 
     const doc = new jsPDF();
+    addThaiFont(doc); // Enable Thai character support
     let yPos = 20;
 
     // Title
