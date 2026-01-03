@@ -9,7 +9,6 @@ import { base44 } from '@/api/base44Client';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toast, Toaster } from 'sonner';
-import { addThaiFont } from '@/components/pdf/ThaiFont';
 
 import CPRTimer from '@/components/cpr/CPRTimer';
 import CycleTracker from '@/components/cpr/CycleTracker';
@@ -735,7 +734,6 @@ export default function CPRTracker() {
       : 'Ongoing - CPR in progress';
 
     const doc = new jsPDF();
-    addThaiFont(doc); // Enable Thai character support
     let yPos = 20;
 
     // Title
