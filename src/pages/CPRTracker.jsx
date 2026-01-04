@@ -467,6 +467,7 @@ export default function CPRTracker() {
     addEvent('pulse', `Pulse check performed (Cycle ${currentCycle}) - Synced`);
     setCurrentCycle(prev => prev + 1);
     setCycleSeconds(0);
+    setTotalSeconds(prev => prev + 120); // Add 2 minutes to total CPR time
     setShockDeliveredThisCycle(false);
     setRhythmSelectionStage('unselected');
     addEvent('cycle', `Cycle ${currentCycle + 1} started - Synced`);
