@@ -57,7 +57,7 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
           <Button
             onClick={handleSync}
             disabled={!hasStarted}
-            className={`h-7 px-4 rounded-full text-xs font-semibold transition-all ${
+            className={`h-6 px-3 rounded-full text-[10px] font-semibold transition-all ${
               syncPressed 
                 ? 'bg-green-600 hover:bg-green-700 text-white' 
                 : 'bg-slate-600 hover:bg-slate-500 text-slate-300'

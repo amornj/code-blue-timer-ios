@@ -107,13 +107,13 @@ export default function EventBanner({
         >
           {/* LUCAS Toggle for Compressor */}
           {event.type === 'compressor' && (
-            <div className="absolute top-2 right-2 flex flex-col items-center gap-1 bg-black/30 rounded-lg px-2 py-2">
-              <span className="text-xs font-medium">LUCAS</span>
+            <div className="absolute top-1 right-1 flex flex-col items-center gap-0.5 bg-black/30 rounded-lg px-1.5 py-1">
+              <span className="text-[9px] font-medium">LUCAS</span>
               <Switch
                 checked={lucasActive}
                 onCheckedChange={onToggleLucas}
                 disabled={disabled}
-                className="data-[state=checked]:bg-amber-500"
+                className="data-[state=checked]:bg-amber-500 scale-75"
               />
             </div>
           )}
