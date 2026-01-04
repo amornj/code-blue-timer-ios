@@ -237,16 +237,14 @@ export default function CPRTracker() {
       }
     }
     
-    // Determine adrenaline status - only in COACH mode
+    // Determine adrenaline status
     let adrenalineStatus = 'pending';
-    if (soundEnabled) {
-      if (adrenalineDue) {
-        adrenalineStatus = 'active';
-      } else if (timeSinceLastAdrenaline !== null) {
-        const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
-        if (timeUntilNext > 30) {
-          adrenalineStatus = 'completed';
-        }
+    if (adrenalineDue) {
+      adrenalineStatus = soundEnabled ? 'active' : 'pending';
+    } else if (timeSinceLastAdrenaline !== null) {
+      const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
+      if (timeUntilNext > 30) {
+        adrenalineStatus = 'completed';
       }
     }
 
@@ -263,41 +261,40 @@ export default function CPRTracker() {
         timing: 'Every cycle',
         status: lucasActive ? 'pending' : (cycleComplete && compressorChanges < cycle ? 'active' : (compressorChanges >= cycle ? 'completed' : 'pending'))
       },
-      // Only show medication alerts in COACH mode
-      ...(soundEnabled ? [{
+      {
         type: 'adrenaline',
         label: 'Adrenaline 1mg',
         timing: `Every ${adrenalineFrequency} minutes`,
         status: adrenalineStatus,
         frequency: adrenalineFrequency
-      }] : []),
-      ...(soundEnabled && isShockable && amiodaroneTotal < 300 ? [{
+      },
+      ...(isShockable && amiodaroneTotal < 300 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 300mg',
         timing: 'After 3rd shock',
         dose: 300,
-        status: amiodarone300Due ? 'active' : 'pending'
+        status: soundEnabled && amiodarone300Due ? 'active' : 'pending'
       }] : []),
-      ...(soundEnabled && isShockable && amiodaroneTotal >= 300 && amiodaroneTotal < 450 ? [{
+      ...(isShockable && amiodaroneTotal >= 300 && amiodaroneTotal < 450 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 150mg',
         timing: 'After 5th shock',
         dose: 150,
-        status: amiodarone150Due ? 'active' : 'pending'
+        status: soundEnabled && amiodarone150Due ? 'active' : 'pending'
       }] : []),
-      ...(soundEnabled && isShockable && lidocaineCumulativeDose < 1.5 ? [{
+      ...(isShockable && lidocaineCumulativeDose < 1.5 ? [{
         type: 'lidocaine',
         label: 'Xylocaine 1.5 mg/kg',
         timing: 'After 8th shock',
         dose: 1.5,
-        status: lidocaine1mgDue ? 'active' : 'pending'
+        status: soundEnabled && lidocaine1mgDue ? 'active' : 'pending'
       }] : []),
-      ...(soundEnabled && isShockable && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 3 ? [{
+      ...(isShockable && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 3 ? [{
         type: 'lidocaine',
         label: 'Xylocaine 0.75 mg/kg',
         timing: 'After 11th, 14th shock',
         dose: 0.75,
-        status: lidocaine05mgDue ? 'active' : 'pending'
+        status: soundEnabled && lidocaine05mgDue ? 'active' : 'pending'
       }] : [])
     ];
     
@@ -477,10 +474,25 @@ export default function CPRTracker() {
 
   const handleConfirmAdrenaline = () => {
     playClick();
-    setAdrenalineCount(prev => prev + 1);
-    setLastAdrenalineTime(totalSeconds);
+    const newCount = adrenalineCount + 1;
+    const eventTime = totalSeconds;
+    setAdrenalineCount(newCount);
+    setLastAdrenalineTime(eventTime);
     setAdrenalineDue(false);
-    addEvent('adrenaline', `Adrenaline 1mg administered (Dose #${adrenalineCount + 1})`, { dose: 1 });
+    addEvent('adrenaline', `Adrenaline 1mg administered (Dose #${newCount})`, { dose: 1 });
+    
+    toast.success('Adrenaline 1mg administered', {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setAdrenalineCount(prev => prev - 1);
+          setLastAdrenalineTime(null);
+          setEvents(prev => prev.slice(0, -1));
+        }
+      }
+    });
   };
 
   const handleAdrenalineFrequencyChange = (newFrequency) => {
@@ -496,6 +508,18 @@ export default function CPRTracker() {
       setAmiodarone150Due(false);
     }
     addEvent('amiodarone', `Amiodarone ${dose}mg administered`, { dose });
+    
+    toast.success(`Amiodarone ${dose}mg administered`, {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setAmiodaroneTotal(prev => prev - dose);
+          setEvents(prev => prev.slice(0, -1));
+        }
+      }
+    });
   };
 
   const handleConfirmLidocaine = (dose) => {
@@ -508,6 +532,18 @@ export default function CPRTracker() {
       setLidocaine05mgDue(false);
     }
     addEvent('lidocaine', `Xylocaine ${dose} mg/kg administered (cumulative: ${lidocaineCumulativeDose + dose} mg/kg)`, { dose });
+    
+    toast.success(`Xylocaine ${dose} mg/kg administered`, {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setLidocaineCumulativeDose(prev => prev - dose);
+          setEvents(prev => prev.slice(0, -1));
+        }
+      }
+    });
   };
 
   const handleAddDiscretionaryMed = ({ medication, dosage }) => {

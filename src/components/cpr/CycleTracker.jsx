@@ -3,6 +3,7 @@ import { RefreshCw, Zap, Syringe, Clock } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted, onSyncCycle }) {
   const [showModeDialog, setShowModeDialog] = useState(false);
@@ -25,9 +26,21 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
   };
 
   const confirmModeChange = () => {
+    const prevMode = soundEnabled;
     onSoundToggle(pendingMode);
     setShowModeDialog(false);
     setPendingMode(null);
+    
+    toast.success(`Switched to ${pendingMode ? 'COACH' : 'TRACK'} mode`, {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          onSoundToggle(prevMode);
+        }
+      }
+    });
   };
 
   const dismissModeChange = () => {
