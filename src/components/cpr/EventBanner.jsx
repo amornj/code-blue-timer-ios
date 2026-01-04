@@ -124,8 +124,8 @@ export default function EventBanner({
                 size="sm"
                 className={`h-7 px-3 text-xs font-semibold ${
                   pulseCheckSynced 
-                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                    : 'bg-blue-900/50 hover:bg-blue-800 text-blue-300 border border-blue-500'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                    : 'bg-slate-700/50 hover:bg-slate-600 text-slate-400 border border-slate-600'
                 }`}
               >
                 {pulseCheckSynced ? 'SYNCED' : 'SYNC'}

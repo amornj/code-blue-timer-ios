@@ -246,11 +246,11 @@ export default function CPRTracker() {
     
     // Determine adrenaline status
     let adrenalineStatus = 'pending';
-    if (adrenalineDue) {
+    if (shouldShowAdrenaline && adrenalineDue) {
       adrenalineStatus = soundEnabled ? 'active' : 'pending';
     } else if (timeSinceLastAdrenaline !== null) {
       const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
-      if (timeUntilNext > 30) {
+      if (timeUntilNext > 30 && timeUntilNext < adrenalineIntervalSeconds) {
         adrenalineStatus = 'completed';
       }
     }
