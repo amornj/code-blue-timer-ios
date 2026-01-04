@@ -71,8 +71,12 @@ export default function EventBanner({
       case 'pulse': onConfirmPulseCheck(); break;
       case 'adrenaline': onConfirmAdrenaline(); break;
       case 'amiodarone': onConfirmAmiodarone(event.dose); break;
-      case 'lidocaine': onConfirmLidocaine(event.dose); break;
+      case 'lidocaine': onConfirmLidocaine(event); break;
     }
+  };
+
+  const isMedicationButton = (type) => {
+    return ['adrenaline', 'amiodarone', 'lidocaine'].includes(type);
   };
 
   return (
@@ -106,14 +110,14 @@ export default function EventBanner({
               <div className="font-semibold text-sm">{event.label}</div>
               <div className="text-xs opacity-75">{event.timing}</div>
             
-              {event.status === 'active' && (
+              {(event.status === 'active' || (event.status === 'pending' && isMedicationButton(event.type))) && (
                 <Button 
                   size="sm" 
-                  className={`mt-2 w-full ${getButtonColors(event.type)} text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`mt-2 w-full ${event.status === 'active' ? getButtonColors(event.type) : 'bg-slate-600 hover:bg-slate-500'} text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed`}
                   onClick={() => handleConfirm(event)}
                   disabled={disabled}
                 >
-                  <Check className="w-4 h-4 mr-1" /> Confirm
+                  <Check className="w-4 h-4 mr-1" /> {event.status === 'active' ? 'Confirm' : 'Give'}
                 </Button>
               )}
               
