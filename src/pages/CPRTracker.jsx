@@ -266,9 +266,11 @@ export default function CPRTracker() {
       }
     }
 
-    // In Track mode, show all ACLS drugs as available for shockable rhythms
+    // For shockable rhythms, always show ACLS drugs (both track and coach mode)
+    // For coach mode, specific doses trigger as active alerts based on protocol
+    // For track mode, all drugs are available without protocol restrictions
     const inTrackMode = !soundEnabled;
-    const showAllDrugsInTrackMode = inTrackMode && isShockable;
+    const inCoachMode = soundEnabled;
 
     const newBannerEvents = [
       {
@@ -287,36 +289,38 @@ export default function CPRTracker() {
         type: 'adrenaline',
         label: 'Adrenaline 1mg',
         timing: `Every ${adrenalineFrequency} minutes`,
-        status: showAllDrugsInTrackMode ? 'pending' : adrenalineStatus,
+        status: inTrackMode && isShockable ? 'pending' : adrenalineStatus,
         frequency: adrenalineFrequency
       },
-      ...(shouldShowAmiodarone300 || showAllDrugsInTrackMode ? [{
+      // Amiodarone - show for all shockable rhythms
+      ...(isShockable ? [{
         type: 'amiodarone',
-        label: showAllDrugsInTrackMode ? 'Amiodarone' : 'Amiodarone 300mg',
-        timing: 'After 3rd shock',
-        dose: showAllDrugsInTrackMode ? null : 300,
-        status: showAllDrugsInTrackMode ? 'pending' : ((shouldShowAmiodarone300 && !amiodarone300Dismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending')
+        label: 'Amiodarone',
+        timing: inTrackMode ? 'PRN' : 'After 3rd/5th shock',
+        dose: null, // Always use dialog for dose selection
+        status: (() => {
+          if (inTrackMode) return 'pending';
+          // Coach mode: check if any amiodarone dose is due
+          if ((shouldShowAmiodarone300 && !amiodarone300Dismissed) || (shouldShowAmiodarone150 && !amiodarone150Dismissed)) {
+            return 'active';
+          }
+          return 'pending';
+        })()
       }] : []),
-      ...(shouldShowAmiodarone150 && !showAllDrugsInTrackMode ? [{
-        type: 'amiodarone',
-        label: 'Amiodarone 150mg',
-        timing: 'After 5th shock',
-        dose: 150,
-        status: (shouldShowAmiodarone150 && !amiodarone150Dismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
-      }] : []),
-      ...(shouldShowLidocaine1mg || showAllDrugsInTrackMode ? [{
+      // Xylocaine - show for all shockable rhythms
+      ...(isShockable ? [{
         type: 'lidocaine',
         label: 'Xylocaine',
-        timing: showAllDrugsInTrackMode ? 'PRN' : 'After 8th shock',
-        dose: showAllDrugsInTrackMode ? null : 1.5,
-        status: showAllDrugsInTrackMode ? 'pending' : ((shouldShowLidocaine1mg && !lidocaine1mgDismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending')
-      }] : []),
-      ...(shouldShowLidocaine05mg && !showAllDrugsInTrackMode ? [{
-        type: 'lidocaine',
-        label: 'Xylocaine 0.75 mg/kg',
-        timing: 'After 11th, 14th shock',
-        dose: 0.75,
-        status: (shouldShowLidocaine05mg && !lidocaine05mgDismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
+        timing: inTrackMode ? 'PRN' : 'After 8th/11th/14th shock',
+        dose: null, // Always use dialog for dose selection
+        status: (() => {
+          if (inTrackMode) return 'pending';
+          // Coach mode: check if any lidocaine dose is due
+          if ((shouldShowLidocaine1mg && !lidocaine1mgDismissed) || (shouldShowLidocaine05mg && !lidocaine05mgDismissed)) {
+            return 'active';
+          }
+          return 'pending';
+        })()
       }] : [])
     ];
 
@@ -1499,17 +1503,22 @@ export default function CPRTracker() {
           <div className="space-y-6 py-4">
             <div>
               <label className="text-sm font-medium text-slate-300 mb-3 block">Dose per kg</label>
-              <Select value={lidocaineDosePerKg.toString()} onValueChange={(val) => setLidocaineDosePerKg(parseFloat(val))}>
-                <SelectTrigger className="bg-slate-800 border-slate-600 text-white h-12">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-600">
-                  <SelectItem value="0.5" className="text-white">0.5 mg/kg</SelectItem>
-                  <SelectItem value="0.75" className="text-white">0.75 mg/kg</SelectItem>
-                  <SelectItem value="1.0" className="text-white">1.0 mg/kg</SelectItem>
-                  <SelectItem value="1.5" className="text-white">1.5 mg/kg</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-4 gap-2">
+                {[0.5, 0.75, 1.0, 1.5].map((dose) => (
+                  <Button
+                    key={dose}
+                    variant={lidocaineDosePerKg === dose ? "default" : "outline"}
+                    className={`h-14 text-base font-bold ${
+                      lidocaineDosePerKg === dose 
+                        ? 'bg-teal-600 hover:bg-teal-700 text-white' 
+                        : 'border-slate-600 text-slate-300 hover:bg-slate-800'
+                    }`}
+                    onClick={() => setLidocaineDosePerKg(dose)}
+                  >
+                    {dose}
+                  </Button>
+                ))}
+              </div>
             </div>
 
             <div>
