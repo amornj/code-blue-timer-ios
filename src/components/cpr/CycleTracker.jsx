@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { RefreshCw, Zap, Syringe, Clock } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted }) {
+  const [showModeDialog, setShowModeDialog] = useState(false);
+  const [pendingMode, setPendingMode] = useState(null);
+  
   const progress = (cycleSeconds / 120) * 100;
   const remainingSeconds = 120 - cycleSeconds;
   
@@ -10,6 +15,23 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
     const mins = Math.floor(secs / 60);
     const s = secs % 60;
     return `${mins}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleModeToggle = () => {
+    const newMode = !soundEnabled;
+    setPendingMode(newMode);
+    setShowModeDialog(true);
+  };
+
+  const confirmModeChange = () => {
+    onSoundToggle(pendingMode);
+    setShowModeDialog(false);
+    setPendingMode(null);
+  };
+
+  const dismissModeChange = () => {
+    setShowModeDialog(false);
+    setPendingMode(null);
   };
 
   const isUrgent = remainingSeconds <= 10;
@@ -22,17 +44,20 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
     }`}>
       {/* Total CPR Time */}
       <div className="mb-6 text-center relative">
-        {/* Sound Toggle - Top Right */}
-        <div className="absolute top-0 right-0 flex flex-col items-center gap-1.5">
-          <span className={`text-xs font-semibold uppercase tracking-wider ${soundEnabled ? 'text-green-400' : 'text-slate-400'}`}>
-            SOUND
+        {/* Mode Toggle - Top Right (Vertical) */}
+        <div className="absolute top-0 right-0 flex flex-col items-center gap-2">
+          <span className={`text-xs font-bold uppercase tracking-wider ${soundEnabled ? 'text-green-400' : 'text-slate-400'}`}>
+            COACH
           </span>
           <Switch
             checked={soundEnabled}
-            onCheckedChange={onSoundToggle}
+            onCheckedChange={handleModeToggle}
             disabled={!hasStarted}
-            className="data-[state=checked]:bg-green-600"
+            className="data-[state=checked]:bg-green-600 rotate-90"
           />
+          <span className={`text-xs font-bold uppercase tracking-wider ${!soundEnabled ? 'text-blue-400' : 'text-slate-400'}`}>
+            TRACK
+          </span>
         </div>
 
         <div className="flex items-center justify-center gap-2 mb-2">
@@ -104,6 +129,41 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
           <div className="text-xs text-slate-400">Lidocaine</div>
         </div>
         </div>
+
+        {/* Mode Change Confirmation Dialog */}
+        <Dialog open={showModeDialog} onOpenChange={setShowModeDialog}>
+          <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl">
+                {pendingMode ? 'Switch to COACH Mode?' : 'Switch to TRACK Mode?'}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <p className="text-slate-300 text-sm">
+                {pendingMode 
+                  ? 'COACH mode provides audio guidance and alerts during CPR.' 
+                  : 'TRACK mode records CPR data without audio guidance.'}
+              </p>
+
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={dismissModeChange}
+                  className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={confirmModeChange}
+                  className={`flex-1 ${pendingMode ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                >
+                  Confirm
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
         </div>
         );
         }
