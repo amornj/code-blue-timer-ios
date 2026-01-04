@@ -462,6 +462,12 @@ export default function CPRTracker() {
 
   const handleSyncCycle = () => {
     playClick();
+    
+    // Store previous values for undo
+    const prevPulseChecks = pulseChecks;
+    const prevCycle = currentCycle;
+    const prevTotalSeconds = totalSeconds;
+    
     const newCount = pulseChecks + 1;
     setPulseChecks(newCount);
     addEvent('pulse', `Pulse check performed (Cycle ${currentCycle}) - Synced`);
@@ -471,6 +477,21 @@ export default function CPRTracker() {
     setShockDeliveredThisCycle(false);
     setRhythmSelectionStage('unselected');
     addEvent('cycle', `Cycle ${currentCycle + 1} started - Synced`);
+    
+    toast.success('Synced: Cycle +1, Total CPR Time +2 min', {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setPulseChecks(prevPulseChecks);
+          setCurrentCycle(prevCycle);
+          setTotalSeconds(prevTotalSeconds);
+          setCycleSeconds(0);
+          setEvents(prev => prev.slice(0, -2)); // Remove both events
+        }
+      }
+    });
   };
 
   const handleConfirmAdrenaline = () => {
