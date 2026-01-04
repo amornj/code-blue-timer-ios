@@ -512,6 +512,26 @@ export default function CPRTracker() {
     }
   };
 
+  const handleSyncPulseCheck = () => {
+    playClick();
+    
+    const prevCycleSeconds = cycleSeconds;
+    
+    // Set cycle time to 115 seconds so alarms trigger together (at 110s+ for both)
+    setCycleSeconds(115);
+    
+    toast.success('Pulse check synced - alarms will align next cycle', {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setCycleSeconds(prevCycleSeconds);
+        }
+      }
+    });
+  };
+
   const handleConfirmAdrenaline = () => {
     playClick();
     const newCount = adrenalineCount + 1;
@@ -967,7 +987,7 @@ export default function CPRTracker() {
       doc.text('Event Log', 15, yPos);
       yPos += 5;
 
-      const filteredEvents = events.filter(e => e.type !== 'start');
+      const filteredEvents = events.filter(e => e.type !== 'start' && !e.message?.includes('Time adjusted'));
 
       doc.autoTable({
         startY: yPos,
@@ -1117,6 +1137,7 @@ export default function CPRTracker() {
           onConfirmAmiodarone={handleConfirmAmiodarone}
           onConfirmLidocaine={handleConfirmLidocaine}
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
+          onSyncPulseCheck={handleSyncPulseCheck}
           lucasActive={lucasActive}
           onToggleLucas={handleToggleLucas}
           disabled={!hasStarted}
