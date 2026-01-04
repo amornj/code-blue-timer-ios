@@ -120,15 +120,15 @@ export default function EventBanner({
 
           {/* SYNC Button for Pulse Check */}
           {event.type === 'pulse' && (
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-1 right-1">
               <Button
                 onClick={onSyncPulseCheck}
                 disabled={disabled || pulseCheckSynced}
                 size="sm"
-                className={`h-7 px-3 text-xs font-semibold ${
+                className={`h-5 px-2 text-[9px] font-medium border-0 ${
                   pulseCheckSynced 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-slate-700/50 hover:bg-slate-600 text-slate-400 border border-slate-600'
+                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    : 'bg-black/30 hover:bg-black/40 text-slate-300'
                 }`}
               >
                 {pulseCheckSynced ? 'SYNCED' : 'SYNC'}
