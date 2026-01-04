@@ -422,6 +422,7 @@ export default function CPRTracker() {
     setMedicationCounts({});
     setUsedProcedures([]);
     setSyncPressCount(0);
+    setPulseCheckSynced(false);
   };
 
 
@@ -453,15 +454,25 @@ export default function CPRTracker() {
     const newCount = pulseChecks + 1;
     setPulseChecks(newCount);
     addEvent('pulse', `Pulse check performed (Cycle ${currentCycle})`);
-    // Move to next cycle only after pulse check
-    setCurrentCycle(prev => prev + 1);
-    setCycleSeconds(0);
-    setShockDeliveredThisCycle(false); // Reset shock flag for new cycle
-    setRhythmSelectionStage('unselected'); // Allow rhythm selection for new cycle
-    addEvent('cycle', `Cycle ${currentCycle + 1} started`);
+    
+    // Only move to next cycle if not synced
+    if (!pulseCheckSynced) {
+      setCurrentCycle(prev => prev + 1);
+      setCycleSeconds(0);
+      setShockDeliveredThisCycle(false);
+      setRhythmSelectionStage('unselected');
+      addEvent('cycle', `Cycle ${currentCycle + 1} started`);
+    } else {
+      // Just reset cycle timer without advancing cycle
+      setCycleSeconds(0);
+      setShockDeliveredThisCycle(false);
+      setRhythmSelectionStage('unselected');
+      setPulseCheckSynced(false); // Reset sync flag
+    }
   };
 
   const [syncPressCount, setSyncPressCount] = useState(0);
+  const [pulseCheckSynced, setPulseCheckSynced] = useState(false);
 
   const handleSyncCycle = () => {
     playClick();
@@ -516,17 +527,20 @@ export default function CPRTracker() {
     playClick();
     
     const prevCycleSeconds = cycleSeconds;
+    const prevSynced = pulseCheckSynced;
     
     // Set cycle time to 115 seconds so alarms trigger together (at 110s+ for both)
     setCycleSeconds(115);
+    setPulseCheckSynced(true);
     
-    toast.success('Pulse check synced - alarms will align next cycle', {
+    toast.success('Pulse check synced - cycle will not advance on confirm', {
       duration: 4000,
       position: 'bottom-center',
       action: {
         label: 'Undo',
         onClick: () => {
           setCycleSeconds(prevCycleSeconds);
+          setPulseCheckSynced(prevSynced);
         }
       }
     });
@@ -1138,6 +1152,7 @@ export default function CPRTracker() {
           onConfirmLidocaine={handleConfirmLidocaine}
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
           onSyncPulseCheck={handleSyncPulseCheck}
+          pulseCheckSynced={pulseCheckSynced}
           lucasActive={lucasActive}
           onToggleLucas={handleToggleLucas}
           disabled={!hasStarted}

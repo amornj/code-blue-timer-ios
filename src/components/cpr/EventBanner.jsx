@@ -13,6 +13,7 @@ export default function EventBanner({
   onConfirmLidocaine,
   onAdrenalineFrequencyChange,
   onSyncPulseCheck,
+  pulseCheckSynced,
   lucasActive,
   onToggleLucas,
   disabled = false
@@ -108,11 +109,15 @@ export default function EventBanner({
             <div className="absolute top-2 right-2">
               <Button
                 onClick={onSyncPulseCheck}
-                disabled={disabled}
+                disabled={disabled || pulseCheckSynced}
                 size="sm"
-                className="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                className={`h-7 px-3 text-xs font-semibold ${
+                  pulseCheckSynced 
+                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    : 'bg-blue-900/50 hover:bg-blue-800 text-blue-300 border border-blue-500'
+                }`}
               >
-                SYNC
+                {pulseCheckSynced ? 'SYNCED' : 'SYNC'}
               </Button>
             </div>
           )}
