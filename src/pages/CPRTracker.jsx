@@ -66,6 +66,13 @@ export default function CPRTracker() {
   const [amiodarone300Due, setAmiodarone300Due] = useState(false);
   const [amiodarone150Due, setAmiodarone150Due] = useState(false);
   
+  // Track dismissed alarms
+  const [adrenalineDismissed, setAdrenalineDismissed] = useState(false);
+  const [amiodarone300Dismissed, setAmiodarone300Dismissed] = useState(false);
+  const [amiodarone150Dismissed, setAmiodarone150Dismissed] = useState(false);
+  const [lidocaine1mgDismissed, setLidocaine1mgDismissed] = useState(false);
+  const [lidocaine05mgDismissed, setLidocaine05mgDismissed] = useState(false);
+  
   // Lidocaine tracking
   const [lidocaineCumulativeDose, setLidocaineCumulativeDose] = useState(0); // in mg/kg
   const [lastLidocaineTime, setLastLidocaineTime] = useState(null);
@@ -202,8 +209,8 @@ export default function CPRTracker() {
     const shouldShowAdrenaline = adrenalineCount === 0 
       ? (isPEAorAsystole ? totalSeconds >= 10 : isShockable ? shockCount >= 2 : false)
       : (timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds);
-    
-    if (shouldShowAdrenaline && !adrenalineDue) {
+
+    if (shouldShowAdrenaline && !adrenalineDue && !adrenalineDismissed) {
       setAdrenalineDue(true);
     }
     
@@ -213,10 +220,10 @@ export default function CPRTracker() {
     // - 150mg after 5th shock (when in shockable rhythm)
     // - Max 450mg total per session
     if (isShockable && amiodaroneTotal < 450) {
-      if (shockCount >= 3 && amiodaroneTotal < 300) {
+      if (shockCount >= 3 && amiodaroneTotal < 300 && !amiodarone300Dismissed) {
         setAmiodarone300Due(true);
       }
-      if (shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450) {
+      if (shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450 && !amiodarone150Dismissed) {
         setAmiodarone150Due(true);
       }
     }
@@ -226,13 +233,13 @@ export default function CPRTracker() {
     // - 0.75 mg/kg after 11th, 14th shock (when in shockable rhythm)
     // - Max 3 mg/kg total per session
     if (isShockable && lidocaineCumulativeDose < 3) {
-      if (shockCount >= 8 && lidocaineCumulativeDose === 0) {
+      if (shockCount >= 8 && lidocaineCumulativeDose === 0 && !lidocaine1mgDismissed) {
         setLidocaine1mgDue(true);
       }
-      if (shockCount >= 11 && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 2.25) {
+      if (shockCount >= 11 && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 2.25 && !lidocaine05mgDismissed) {
         setLidocaine05mgDue(true);
       }
-      if (shockCount >= 14 && lidocaineCumulativeDose >= 2.25 && lidocaineCumulativeDose < 3) {
+      if (shockCount >= 14 && lidocaineCumulativeDose >= 2.25 && lidocaineCumulativeDose < 3 && !lidocaine05mgDismissed) {
         setLidocaine05mgDue(true);
       }
     }
@@ -299,7 +306,7 @@ export default function CPRTracker() {
     ];
     
     setBannerEvents(newBannerEvents);
-  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks]);
+  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks, adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, lidocaine1mgDismissed, lidocaine05mgDismissed, shockCount]);
 
   // Timer effect
   useEffect(() => {
@@ -423,6 +430,11 @@ export default function CPRTracker() {
     setUsedProcedures([]);
     setSyncPressCount(0);
     setPulseCheckSynced(false);
+    setAdrenalineDismissed(false);
+    setAmiodarone300Dismissed(false);
+    setAmiodarone150Dismissed(false);
+    setLidocaine1mgDismissed(false);
+    setLidocaine05mgDismissed(false);
   };
 
 
@@ -553,6 +565,7 @@ export default function CPRTracker() {
     setAdrenalineCount(newCount);
     setLastAdrenalineTime(eventTime);
     setAdrenalineDue(false);
+    setAdrenalineDismissed(false); // Clear dismissed flag when given
     addEvent('adrenaline', `Adrenaline 1mg administered (Dose #${newCount})`, { dose: 1 });
     
     toast.success('Adrenaline 1mg administered', {
@@ -571,10 +584,20 @@ export default function CPRTracker() {
 
   const handleDismissAdrenaline = () => {
     playClick();
+    const prevDismissed = adrenalineDismissed;
     setAdrenalineDue(false);
+    setAdrenalineDismissed(true);
+    
     toast.info('Adrenaline alarm dismissed', {
       duration: 4000,
-      position: 'bottom-center'
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setAdrenalineDismissed(prevDismissed);
+          setAdrenalineDue(true);
+        }
+      }
     });
   };
 
@@ -587,8 +610,10 @@ export default function CPRTracker() {
     setAmiodaroneTotal(prev => prev + dose);
     if (dose === 300) {
       setAmiodarone300Due(false);
+      setAmiodarone300Dismissed(false); // Clear dismissed flag when given
     } else if (dose === 150) {
       setAmiodarone150Due(false);
+      setAmiodarone150Dismissed(false); // Clear dismissed flag when given
     }
     addEvent('amiodarone', `Amiodarone ${dose}mg administered`, { dose });
     
@@ -608,14 +633,38 @@ export default function CPRTracker() {
   const handleDismissAmiodarone = (dose) => {
     playClick();
     if (dose === 300) {
+      const prevDismissed = amiodarone300Dismissed;
       setAmiodarone300Due(false);
+      setAmiodarone300Dismissed(true);
+      
+      toast.info('Amiodarone 300mg alarm dismissed', {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setAmiodarone300Dismissed(prevDismissed);
+            setAmiodarone300Due(true);
+          }
+        }
+      });
     } else if (dose === 150) {
+      const prevDismissed = amiodarone150Dismissed;
       setAmiodarone150Due(false);
+      setAmiodarone150Dismissed(true);
+      
+      toast.info('Amiodarone 150mg alarm dismissed', {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setAmiodarone150Dismissed(prevDismissed);
+            setAmiodarone150Due(true);
+          }
+        }
+      });
     }
-    toast.info(`Amiodarone ${dose}mg alarm dismissed`, {
-      duration: 4000,
-      position: 'bottom-center'
-    });
   };
 
   const [showLidocaineDialog, setShowLidocaineDialog] = useState(false);
@@ -662,8 +711,10 @@ export default function CPRTracker() {
     
     if (lidocaineDosePerKg === 1.5) {
       setLidocaine1mgDue(false);
+      setLidocaine1mgDismissed(false); // Clear dismissed flag when given
     } else if (lidocaineDosePerKg === 0.75) {
       setLidocaine05mgDue(false);
+      setLidocaine05mgDismissed(false); // Clear dismissed flag when given
     }
     
     addEvent('lidocaine', `Xylocaine ${lidocaineDosePerKg} mg/kg (${totalDose}mg for ${patientWeight}kg) administered (cumulative: ${lidocaineCumulativeDose + lidocaineDosePerKg} mg/kg)`, { dose: lidocaineDosePerKg });
@@ -686,14 +737,38 @@ export default function CPRTracker() {
   const handleDismissLidocaine = (dose) => {
     playClick();
     if (dose === 1.5) {
+      const prevDismissed = lidocaine1mgDismissed;
       setLidocaine1mgDue(false);
+      setLidocaine1mgDismissed(true);
+      
+      toast.info('Xylocaine 1.5 mg/kg alarm dismissed', {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setLidocaine1mgDismissed(prevDismissed);
+            setLidocaine1mgDue(true);
+          }
+        }
+      });
     } else if (dose === 0.75) {
+      const prevDismissed = lidocaine05mgDismissed;
       setLidocaine05mgDue(false);
+      setLidocaine05mgDismissed(true);
+      
+      toast.info('Xylocaine 0.75 mg/kg alarm dismissed', {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setLidocaine05mgDismissed(prevDismissed);
+            setLidocaine05mgDue(true);
+          }
+        }
+      });
     }
-    toast.info(`Xylocaine ${dose} mg/kg alarm dismissed`, {
-      duration: 4000,
-      position: 'bottom-center'
-    });
   };
 
   const handleAddDiscretionaryMed = ({ medication, dosage }) => {
