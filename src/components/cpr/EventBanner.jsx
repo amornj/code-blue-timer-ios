@@ -75,7 +75,10 @@ export default function EventBanner({
       case 'compressor': onConfirmCompressorChange(); break;
       case 'pulse': onConfirmPulseCheck(); break;
       case 'adrenaline': onConfirmAdrenaline(); break;
-      case 'amiodarone': onConfirmAmiodarone(event.dose); break;
+      case 'amiodarone': 
+        // Pass event object if dose is null (track mode), otherwise pass dose directly
+        onConfirmAmiodarone(event.dose === null ? event : event.dose); 
+        break;
       case 'lidocaine': onConfirmLidocaine(event); break;
     }
   };

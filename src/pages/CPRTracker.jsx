@@ -266,6 +266,10 @@ export default function CPRTracker() {
       }
     }
 
+    // In Track mode, show all ACLS drugs as available for shockable rhythms
+    const inTrackMode = !soundEnabled;
+    const showAllDrugsInTrackMode = inTrackMode && isShockable;
+
     const newBannerEvents = [
       {
         type: 'pulse',
@@ -283,31 +287,31 @@ export default function CPRTracker() {
         type: 'adrenaline',
         label: 'Adrenaline 1mg',
         timing: `Every ${adrenalineFrequency} minutes`,
-        status: adrenalineStatus,
+        status: showAllDrugsInTrackMode ? 'pending' : adrenalineStatus,
         frequency: adrenalineFrequency
       },
-      ...(shouldShowAmiodarone300 ? [{
+      ...(shouldShowAmiodarone300 || showAllDrugsInTrackMode ? [{
         type: 'amiodarone',
-        label: 'Amiodarone 300mg',
+        label: showAllDrugsInTrackMode ? 'Amiodarone' : 'Amiodarone 300mg',
         timing: 'After 3rd shock',
-        dose: 300,
-        status: (shouldShowAmiodarone300 && !amiodarone300Dismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
+        dose: showAllDrugsInTrackMode ? null : 300,
+        status: showAllDrugsInTrackMode ? 'pending' : ((shouldShowAmiodarone300 && !amiodarone300Dismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending')
       }] : []),
-      ...(shouldShowAmiodarone150 ? [{
+      ...(shouldShowAmiodarone150 && !showAllDrugsInTrackMode ? [{
         type: 'amiodarone',
         label: 'Amiodarone 150mg',
         timing: 'After 5th shock',
         dose: 150,
         status: (shouldShowAmiodarone150 && !amiodarone150Dismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
       }] : []),
-      ...(shouldShowLidocaine1mg ? [{
+      ...(shouldShowLidocaine1mg || showAllDrugsInTrackMode ? [{
         type: 'lidocaine',
-        label: 'Xylocaine 1.5 mg/kg',
-        timing: 'After 8th shock',
-        dose: 1.5,
-        status: (shouldShowLidocaine1mg && !lidocaine1mgDismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
+        label: 'Xylocaine',
+        timing: showAllDrugsInTrackMode ? 'PRN' : 'After 8th shock',
+        dose: showAllDrugsInTrackMode ? null : 1.5,
+        status: showAllDrugsInTrackMode ? 'pending' : ((shouldShowLidocaine1mg && !lidocaine1mgDismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending')
       }] : []),
-      ...(shouldShowLidocaine05mg ? [{
+      ...(shouldShowLidocaine05mg && !showAllDrugsInTrackMode ? [{
         type: 'lidocaine',
         label: 'Xylocaine 0.75 mg/kg',
         timing: 'After 11th, 14th shock',
@@ -315,7 +319,7 @@ export default function CPRTracker() {
         status: (shouldShowLidocaine05mg && !lidocaine05mgDismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
       }] : [])
     ];
-    
+
     setBannerEvents(newBannerEvents);
   }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks, adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, lidocaine1mgDismissed, lidocaine05mgDismissed, shockCount]);
 
@@ -623,15 +627,23 @@ export default function CPRTracker() {
     setAdrenalineFrequency(newFrequency);
   };
 
-  const handleConfirmAmiodarone = (dose) => {
+  const handleConfirmAmiodarone = (doseOrEvent) => {
+    // If called with an event object (from EventBanner in track mode), show dialog
+    if (typeof doseOrEvent === 'object' && doseOrEvent.dose === null) {
+      setShowAmiodaroneDialog(true);
+      return;
+    }
+    
+    // Otherwise, it's a direct dose value
+    const dose = doseOrEvent;
     playClick();
     setAmiodaroneTotal(prev => prev + dose);
     if (dose === 300) {
       setAmiodarone300Due(false);
-      setAmiodarone300Dismissed(false); // Clear dismissed flag when given
+      setAmiodarone300Dismissed(false);
     } else if (dose === 150) {
       setAmiodarone150Due(false);
-      setAmiodarone150Dismissed(false); // Clear dismissed flag when given
+      setAmiodarone150Dismissed(false);
     }
     addEvent('amiodarone', `Amiodarone ${dose}mg administered`, { dose });
     
@@ -642,6 +654,35 @@ export default function CPRTracker() {
         label: 'Undo',
         onClick: () => {
           setAmiodaroneTotal(prev => prev - dose);
+          setEvents(prev => prev.slice(0, -1));
+        }
+      }
+    });
+  };
+  
+  const handleAmiodaroneSubmit = () => {
+    playClick();
+    setAmiodaroneTotal(prev => prev + amiodaroneDose);
+    
+    if (amiodaroneDose === 300) {
+      setAmiodarone300Due(false);
+      setAmiodarone300Dismissed(false);
+    } else if (amiodaroneDose === 150) {
+      setAmiodarone150Due(false);
+      setAmiodarone150Dismissed(false);
+    }
+    
+    addEvent('amiodarone', `Amiodarone ${amiodaroneDose}mg administered`, { dose: amiodaroneDose });
+    
+    setShowAmiodaroneDialog(false);
+    
+    toast.success(`Amiodarone ${amiodaroneDose}mg administered`, {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setAmiodaroneTotal(prev => prev - amiodaroneDose);
           setEvents(prev => prev.slice(0, -1));
         }
       }
@@ -688,6 +729,9 @@ export default function CPRTracker() {
   const [showLidocaineDialog, setShowLidocaineDialog] = useState(false);
   const [lidocaineDosePerKg, setLidocaineDosePerKg] = useState(1.5);
   const [patientWeight, setPatientWeight] = useState(60);
+  
+  const [showAmiodaroneDialog, setShowAmiodaroneDialog] = useState(false);
+  const [amiodaroneDose, setAmiodaroneDose] = useState(300);
 
   const handleConfirmLidocaine = (doseOrEvent) => {
     if (typeof doseOrEvent === 'object') {
@@ -1371,6 +1415,70 @@ export default function CPRTracker() {
                   setShowEndDialog(true);
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Amiodarone Dialog */}
+      <Dialog open={showAmiodaroneDialog} onOpenChange={setShowAmiodaroneDialog}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              Administer Amiodarone
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div>
+              <label className="text-sm font-medium text-slate-300 mb-3 block">Select Dose</label>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant={amiodaroneDose === 150 ? "default" : "outline"}
+                  className={`h-16 text-lg font-bold ${
+                    amiodaroneDose === 150 
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                      : 'border-slate-600 text-slate-300 hover:bg-slate-800'
+                  }`}
+                  onClick={() => setAmiodaroneDose(150)}
+                >
+                  150 mg
+                </Button>
+                <Button
+                  variant={amiodaroneDose === 300 ? "default" : "outline"}
+                  className={`h-16 text-lg font-bold ${
+                    amiodaroneDose === 300 
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                      : 'border-slate-600 text-slate-300 hover:bg-slate-800'
+                  }`}
+                  onClick={() => setAmiodaroneDose(300)}
+                >
+                  300 mg
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-purple-900/30 border border-purple-500 rounded-lg p-4">
+              <div className="text-purple-300 text-sm mb-1">Selected Dose</div>
+              <div className="text-white text-3xl font-bold">
+                {amiodaroneDose} mg
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAmiodaroneDialog(false)}
+                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAmiodaroneSubmit}
+                className="flex-1 bg-purple-600 hover:bg-purple-700"
               >
                 Confirm
               </Button>
