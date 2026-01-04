@@ -71,10 +71,9 @@ export default function Layout({ children, currentPageName }) {
               </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-end">
               {isAuthenticated ? (
-                <>
-                  <span className="text-sm text-slate-400">{user?.email}</span>
+                <div className="flex flex-col items-end gap-1">
                   <Button
                     onClick={handleLogout}
                     variant="outline"
@@ -84,7 +83,8 @@ export default function Layout({ children, currentPageName }) {
                     <LogOut className="w-4 h-4 mr-2" />
                     Logout
                   </Button>
-                </>
+                  <span className="text-xs text-slate-400 truncate max-w-[150px]">{user?.email}</span>
+                </div>
               ) : (
                 <Button
                   onClick={handleLogin}
