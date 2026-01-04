@@ -632,8 +632,12 @@ export default function CPRTracker() {
   };
 
   const handleConfirmAmiodarone = (doseOrEvent) => {
-    // If called with an event object (from EventBanner in track mode), show dialog
+    // If called with an event object, show dialog
     if (typeof doseOrEvent === 'object' && doseOrEvent.dose === null) {
+      // Determine which dose number based on amiodarone total
+      const doseNum = amiodaroneTotal < 300 ? 1 : 2;
+      setAmiodaroneDoseNumber(doseNum);
+      setAmiodaroneDose(doseNum === 1 ? 300 : 150); // Set default based on dose number
       setShowAmiodaroneDialog(true);
       return;
     }
@@ -733,13 +737,19 @@ export default function CPRTracker() {
   const [showLidocaineDialog, setShowLidocaineDialog] = useState(false);
   const [lidocaineDosePerKg, setLidocaineDosePerKg] = useState(1.5);
   const [patientWeight, setPatientWeight] = useState(60);
+  const [lidocaineDoseNumber, setLidocaineDoseNumber] = useState(1); // Track which dose (1st, 2nd, or 3rd)
   
   const [showAmiodaroneDialog, setShowAmiodaroneDialog] = useState(false);
   const [amiodaroneDose, setAmiodaroneDose] = useState(300);
+  const [amiodaroneDoseNumber, setAmiodaroneDoseNumber] = useState(1); // Track which dose (1st or 2nd)
 
   const handleConfirmLidocaine = (doseOrEvent) => {
     if (typeof doseOrEvent === 'object') {
       // Called from EventBanner with event object, show dialog
+      // Determine which dose number based on cumulative dose
+      const doseNum = lidocaineCumulativeDose === 0 ? 1 : (lidocaineCumulativeDose < 2.25 ? 2 : 3);
+      setLidocaineDoseNumber(doseNum);
+      setLidocaineDosePerKg(doseNum === 1 ? 1.5 : 0.75); // Set default based on dose number
       setShowLidocaineDialog(true);
       return;
     }
@@ -1432,7 +1442,7 @@ export default function CPRTracker() {
         <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl">
-              Administer Amiodarone
+              Administer Amiodarone {soundEnabled && `(Dose ${amiodaroneDoseNumber})`}
             </DialogTitle>
           </DialogHeader>
 
@@ -1440,28 +1450,32 @@ export default function CPRTracker() {
             <div>
               <label className="text-sm font-medium text-slate-300 mb-3 block">Select Dose</label>
               <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant={amiodaroneDose === 150 ? "default" : "outline"}
-                  className={`h-16 text-lg font-bold ${
-                    amiodaroneDose === 150 
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                      : 'border-slate-600 text-slate-300 hover:bg-slate-800'
-                  }`}
-                  onClick={() => setAmiodaroneDose(150)}
-                >
-                  150 mg
-                </Button>
-                <Button
-                  variant={amiodaroneDose === 300 ? "default" : "outline"}
-                  className={`h-16 text-lg font-bold ${
-                    amiodaroneDose === 300 
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                      : 'border-slate-600 text-slate-300 hover:bg-slate-800'
-                  }`}
-                  onClick={() => setAmiodaroneDose(300)}
-                >
-                  300 mg
-                </Button>
+                {(!soundEnabled || amiodaroneDoseNumber === 1) && (
+                  <Button
+                    variant={amiodaroneDose === 300 ? "default" : "outline"}
+                    className={`h-16 text-lg font-bold ${
+                      amiodaroneDose === 300 
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                        : 'border-slate-600 text-slate-300 hover:bg-slate-800'
+                    } ${soundEnabled && amiodaroneDoseNumber === 1 ? 'col-span-2' : ''}`}
+                    onClick={() => setAmiodaroneDose(300)}
+                  >
+                    300 mg
+                  </Button>
+                )}
+                {(!soundEnabled || amiodaroneDoseNumber === 2) && (
+                  <Button
+                    variant={amiodaroneDose === 150 ? "default" : "outline"}
+                    className={`h-16 text-lg font-bold ${
+                      amiodaroneDose === 150 
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                        : 'border-slate-600 text-slate-300 hover:bg-slate-800'
+                    } ${soundEnabled && amiodaroneDoseNumber === 2 ? 'col-span-2' : ''}`}
+                    onClick={() => setAmiodaroneDose(150)}
+                  >
+                    150 mg
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -1496,15 +1510,20 @@ export default function CPRTracker() {
         <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl">
-              Administer Xylocaine (Lidocaine)
+              Administer Xylocaine (Lidocaine) {soundEnabled && `(Dose ${lidocaineDoseNumber})`}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
             <div>
               <label className="text-sm font-medium text-slate-300 mb-3 block">Dose per kg</label>
-              <div className="grid grid-cols-4 gap-2">
-                {[0.5, 0.75, 1.0, 1.5].map((dose) => (
+              <div className={`grid gap-2 ${soundEnabled ? 'grid-cols-2' : 'grid-cols-4'}`}>
+                {[0.5, 0.75, 1.0, 1.5].filter(dose => {
+                  // In coach mode, filter based on dose number
+                  if (!soundEnabled) return true; // Track mode: show all
+                  if (lidocaineDoseNumber === 1) return dose === 1.0 || dose === 1.5; // First dose: 1.0 or 1.5
+                  return dose === 0.5 || dose === 0.75; // Second/third dose: 0.5 or 0.75
+                }).map((dose) => (
                   <Button
                     key={dose}
                     variant={lidocaineDosePerKg === dose ? "default" : "outline"}
