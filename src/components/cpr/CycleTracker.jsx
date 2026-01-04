@@ -63,7 +63,7 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
                 : 'bg-slate-600 hover:bg-slate-500 text-slate-300'
             }`}
           >
-            SYNC
+            +1 min
           </Button>
         </div>
 

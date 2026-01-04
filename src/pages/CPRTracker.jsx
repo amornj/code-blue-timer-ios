@@ -421,6 +421,7 @@ export default function CPRTracker() {
     setShockDeliveredThisCycle(false);
     setMedicationCounts({});
     setUsedProcedures([]);
+    setSyncPressCount(0);
   };
 
 
@@ -460,38 +461,55 @@ export default function CPRTracker() {
     addEvent('cycle', `Cycle ${currentCycle + 1} started`);
   };
 
+  const [syncPressCount, setSyncPressCount] = useState(0);
+
   const handleSyncCycle = () => {
     playClick();
     
-    // Store previous values for undo
-    const prevPulseChecks = pulseChecks;
-    const prevCycle = currentCycle;
     const prevTotalSeconds = totalSeconds;
+    const prevCycle = currentCycle;
+    const newCount = syncPressCount + 1;
     
-    const newCount = pulseChecks + 1;
-    setPulseChecks(newCount);
-    addEvent('pulse', `Pulse check performed (Cycle ${currentCycle}) - Synced`);
-    setCurrentCycle(prev => prev + 1);
-    setCycleSeconds(0);
-    setTotalSeconds(prev => prev + 120); // Add 2 minutes to total CPR time
-    setShockDeliveredThisCycle(false);
-    setRhythmSelectionStage('unselected');
-    addEvent('cycle', `Cycle ${currentCycle + 1} started - Synced`);
+    setTotalSeconds(prev => prev + 60); // Add 1 minute
+    setSyncPressCount(newCount);
     
-    toast.success('Synced: Cycle +1, Total CPR Time +2 min', {
-      duration: 4000,
-      position: 'bottom-center',
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          setPulseChecks(prevPulseChecks);
-          setCurrentCycle(prevCycle);
-          setTotalSeconds(prevTotalSeconds);
-          setCycleSeconds(0);
-          setEvents(prev => prev.slice(0, -2)); // Remove both events
+    if (newCount === 2) {
+      // Second press - add cycle
+      const prevCycleForUndo = currentCycle;
+      setCurrentCycle(prev => prev + 1);
+      setCycleSeconds(0);
+      setShockDeliveredThisCycle(false);
+      setRhythmSelectionStage('unselected');
+      addEvent('cycle', `Cycle ${currentCycle + 1} started - Time adjusted`);
+      setSyncPressCount(0); // Reset counter
+      
+      toast.success('Added +1 min & Cycle +1', {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setTotalSeconds(prevTotalSeconds);
+            setCurrentCycle(prevCycleForUndo);
+            setSyncPressCount(0);
+            setEvents(prev => prev.slice(0, -1));
+          }
         }
-      }
-    });
+      });
+    } else {
+      // First press - just add time
+      toast.success('Added +1 min (press again to add cycle)', {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setTotalSeconds(prevTotalSeconds);
+            setSyncPressCount(prev => prev - 1);
+          }
+        }
+      });
+    }
   };
 
   const handleConfirmAdrenaline = () => {
