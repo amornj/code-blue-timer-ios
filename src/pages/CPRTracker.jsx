@@ -60,6 +60,7 @@ export default function CPRTracker() {
   // Adrenaline frequency and tracking
   const [adrenalineFrequency, setAdrenalineFrequency] = useState(4); // 3, 4, or 5 minutes
   const [lastAdrenalineTime, setLastAdrenalineTime] = useState(null);
+  const [shockCountAtRhythmChange, setShockCountAtRhythmChange] = useState(null); // Track shock count when changing to shockable rhythm
   
   // Track which medications are due
   const [adrenalineDue, setAdrenalineDue] = useState(false);
@@ -205,10 +206,27 @@ export default function CPRTracker() {
     // Adrenaline rules:
     // - VF/pVT: First dose after 2nd shock, then every 3-5 minutes based on frequency
     // - PEA/Asystole: First dose at 10 seconds, then every 3-5 minutes based on frequency
-    // - Crossover: maintain interval regardless of rhythm change
-    const shouldShowAdrenaline = adrenalineCount === 0 
-      ? (isPEAorAsystole ? totalSeconds >= 10 : isShockable ? shockCount >= 2 : false)
-      : (timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds);
+    // - Crossover VF/pVT → PEA/Asystole: maintain time interval
+    // - Crossover PEA/Asystole → VF/pVT: next dose after 2nd shock in new rhythm, then maintain interval
+
+    const shouldShowAdrenaline = (() => {
+      if (adrenalineCount === 0) {
+        // First dose ever
+        return isPEAorAsystole ? totalSeconds >= 10 : isShockable ? shockCount >= 2 : false;
+      }
+
+      // Check if we need to wait for shocks after rhythm crossover to shockable
+      if (isShockable && shockCountAtRhythmChange !== null) {
+        const shocksInCurrentShockableRhythm = shockCount - shockCountAtRhythmChange;
+        if (shocksInCurrentShockableRhythm < 2) {
+          // Still waiting for 2nd shock after crossover
+          return false;
+        }
+      }
+
+      // Normal time interval check
+      return timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds;
+    })();
 
     // Check amiodarone timing - only for shockable rhythms
     const shouldShowAmiodarone300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300;
@@ -428,6 +446,7 @@ export default function CPRTracker() {
     setAmiodarone150Dismissed(false);
     setLidocaine1mgDismissed(false);
     setLidocaine05mgDismissed(false);
+    setShockCountAtRhythmChange(null);
   };
 
 
@@ -559,6 +578,12 @@ export default function CPRTracker() {
     setLastAdrenalineTime(eventTime);
     setAdrenalineDue(false);
     setAdrenalineDismissed(false); // Clear dismissed flag when given
+    
+    // Clear crossover tracking once adrenaline is given in new shockable rhythm
+    if (shockCountAtRhythmChange !== null) {
+      setShockCountAtRhythmChange(null);
+    }
+    
     addEvent('adrenaline', `Adrenaline 1mg administered (Dose #${newCount})`, { dose: 1 });
     
     toast.success('Adrenaline 1mg administered', {
@@ -879,6 +904,7 @@ export default function CPRTracker() {
     const prevRhythm = currentRhythm;
     const prevStage = rhythmSelectionStage;
     const prevInitialRhythm = initialRhythm;
+    const prevShockCountAtChange = shockCountAtRhythmChange;
     
     setCurrentRhythm(rhythm);
     setRhythmSelectionStage('selected'); // Lock rhythm selection
@@ -895,6 +921,17 @@ export default function CPRTracker() {
     if (prevWasNonShockable && nowIsShockable) {
       setShocksInCurrentShockableRhythm(0);
       setCyclesWithShocks(new Set());
+      
+      // Track shock count at rhythm change for adrenaline crossover logic
+      if (adrenalineCount > 0) {
+        // Only track if we already had adrenaline (crossover from PEA/Asystole)
+        setShockCountAtRhythmChange(shockCount);
+      }
+    }
+    
+    // Clear tracking if moving to non-shockable
+    if (!nowIsShockable) {
+      setShockCountAtRhythmChange(null);
     }
     
     addEvent('rhythm', `Rhythm identified: ${rhythm}${prevRhythm ? ` (was ${prevRhythm})` : ''}`);
@@ -907,6 +944,7 @@ export default function CPRTracker() {
         onClick: () => {
           setCurrentRhythm(prevRhythm);
           setRhythmSelectionStage(prevStage);
+          setShockCountAtRhythmChange(prevShockCountAtChange);
           if (!prevInitialRhythm) {
             setInitialRhythm(null);
           }
