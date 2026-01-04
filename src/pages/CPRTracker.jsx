@@ -713,7 +713,13 @@ export default function CPRTracker() {
 
   const handleDismissAmiodarone = (dose) => {
     playClick();
-    if (dose === 300) {
+    
+    // Determine which dose to dismiss based on current state
+    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
+    const shouldDismiss300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300 && !amiodarone300Dismissed;
+    const shouldDismiss150 = isShockable && shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450 && !amiodarone150Dismissed;
+    
+    if (shouldDismiss300) {
       const prevDismissed = amiodarone300Dismissed;
       setAmiodarone300Due(false);
       setAmiodarone300Dismissed(true);
@@ -729,7 +735,7 @@ export default function CPRTracker() {
           }
         }
       });
-    } else if (dose === 150) {
+    } else if (shouldDismiss150) {
       const prevDismissed = amiodarone150Dismissed;
       setAmiodarone150Due(false);
       setAmiodarone150Dismissed(true);
@@ -837,12 +843,25 @@ export default function CPRTracker() {
 
   const handleDismissLidocaine = (dose) => {
     playClick();
-    if (dose === 1.5) {
+    
+    // Determine which dose to dismiss based on current state
+    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
+    const lidocaineGivenCount = events.filter(e => e.type === 'lidocaine').length;
+    const shouldDismiss1mg = isShockable && shockCount >= 8 && lidocaineGivenCount === 0 && lidocaineCumulativeDose < 3 && !lidocaine1mgDismissed;
+    const shouldDismiss05mg = isShockable && lidocaineGivenCount >= 1 && lidocaineCumulativeDose < 3 && !lidocaine05mgDismissed && (
+      (shockCount >= 11 && lidocaineGivenCount === 1) ||
+      (shockCount >= 14 && lidocaineGivenCount === 2) ||
+      (shockCount >= 17 && lidocaineGivenCount === 3) ||
+      (shockCount >= 20 && lidocaineGivenCount === 4) ||
+      (shockCount >= 23 && lidocaineGivenCount >= 5)
+    );
+    
+    if (shouldDismiss1mg) {
       const prevDismissed = lidocaine1mgDismissed;
       setLidocaine1mgDue(false);
       setLidocaine1mgDismissed(true);
       
-      toast.info('Xylocaine 1.5 mg/kg alarm dismissed', {
+      toast.info('Xylocaine 1st dose alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
         action: {
@@ -853,12 +872,12 @@ export default function CPRTracker() {
           }
         }
       });
-    } else if (dose === 0.75) {
+    } else if (shouldDismiss05mg) {
       const prevDismissed = lidocaine05mgDismissed;
       setLidocaine05mgDue(false);
       setLidocaine05mgDismissed(true);
       
-      toast.info('Xylocaine 0.75 mg/kg alarm dismissed', {
+      toast.info('Xylocaine subsequent dose alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
         action: {
