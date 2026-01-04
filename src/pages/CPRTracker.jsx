@@ -232,12 +232,16 @@ export default function CPRTracker() {
     const shouldShowAmiodarone300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300;
     const shouldShowAmiodarone150 = isShockable && shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450;
 
-    // Lidocaine (Xylocaine) rules - based on dose number
+    // Lidocaine (Xylocaine) rules - based on dose number and max cumulative dose of 3 mg/kg
     const lidocaineGivenCount = events.filter(e => e.type === 'lidocaine').length;
-    const shouldShowLidocaine1mg = isShockable && shockCount >= 8 && lidocaineGivenCount === 0;
+    const shouldShowLidocaine1mg = isShockable && shockCount >= 8 && lidocaineGivenCount === 0 && lidocaineCumulativeDose < 3;
     const shouldShowLidocaine2nd = isShockable && shockCount >= 11 && lidocaineGivenCount === 1 && lidocaineCumulativeDose < 3;
     const shouldShowLidocaine3rd = isShockable && shockCount >= 14 && lidocaineGivenCount === 2 && lidocaineCumulativeDose < 3;
-    const shouldShowLidocaine05mg = shouldShowLidocaine2nd || shouldShowLidocaine3rd;
+    const shouldShowLidocaine4th = isShockable && shockCount >= 17 && lidocaineGivenCount === 3 && lidocaineCumulativeDose < 3;
+    const shouldShowLidocaine5th = isShockable && shockCount >= 20 && lidocaineGivenCount === 4 && lidocaineCumulativeDose < 3;
+    // Continue pattern for additional doses (every 3 shocks after 20th)
+    const shouldShowLidocaineNth = isShockable && shockCount >= 23 && lidocaineGivenCount >= 5 && lidocaineCumulativeDose < 3 && (shockCount - 20) % 3 === 0;
+    const shouldShowLidocaine05mg = shouldShowLidocaine2nd || shouldShowLidocaine3rd || shouldShowLidocaine4th || shouldShowLidocaine5th || shouldShowLidocaineNth;
 
     // Set due flags for tracking
     if (shouldShowAdrenaline && !adrenalineDue && !adrenalineDismissed) {
@@ -293,8 +297,8 @@ export default function CPRTracker() {
         status: inTrackMode && isShockable ? 'pending' : adrenalineStatus,
         frequency: adrenalineFrequency
       },
-      // Amiodarone - show for all shockable rhythms
-      ...(isShockable ? [{
+      // Amiodarone - show for all shockable rhythms (hide if max dose reached)
+      ...(isShockable && amiodaroneTotal < 450 ? [{
         type: 'amiodarone',
         label: 'Amiodarone',
         timing: inTrackMode ? 'PRN' : 'After 3rd/5th shock',
@@ -308,11 +312,11 @@ export default function CPRTracker() {
           return 'pending';
         })()
       }] : []),
-      // Xylocaine - show for all shockable rhythms
-      ...(isShockable ? [{
+      // Xylocaine - show for all shockable rhythms (hide if max dose reached)
+      ...(isShockable && lidocaineCumulativeDose < 3 ? [{
         type: 'lidocaine',
         label: 'Xylocaine',
-        timing: inTrackMode ? 'PRN' : 'After 8th/11th/14th shock',
+        timing: inTrackMode ? 'PRN' : 'After 8th/11th/14th/17th/20th shock',
         dose: null, // Always use dialog for dose selection
         status: (() => {
           if (inTrackMode) return 'pending';
@@ -670,6 +674,15 @@ export default function CPRTracker() {
   };
   
   const handleAmiodaroneSubmit = () => {
+    // Check max dose limit (450 mg)
+    if (amiodaroneTotal + amiodaroneDose > 450) {
+      toast.error('Cannot administer: Max dose 450 mg is reached', {
+        duration: 4000,
+        position: 'bottom-center'
+      });
+      return;
+    }
+    
     playClick();
     setAmiodaroneTotal(prev => prev + amiodaroneDose);
     
@@ -782,6 +795,15 @@ export default function CPRTracker() {
   };
 
   const handleLidocaineSubmit = () => {
+    // Check max dose limit (3 mg/kg)
+    if (lidocaineCumulativeDose + lidocaineDosePerKg > 3) {
+      toast.error('Cannot administer: Max dose 3 mg/kg is reached', {
+        duration: 4000,
+        position: 'bottom-center'
+      });
+      return;
+    }
+    
     const totalDose = lidocaineDosePerKg * patientWeight;
     playClick();
     setLidocaineCumulativeDose(prev => prev + lidocaineDosePerKg);
