@@ -9,8 +9,11 @@ export default function EventBanner({
   onConfirmCompressorChange,
   onConfirmPulseCheck,
   onConfirmAdrenaline,
+  onDismissAdrenaline,
   onConfirmAmiodarone,
+  onDismissAmiodarone,
   onConfirmLidocaine,
+  onDismissLidocaine,
   onAdrenalineFrequencyChange,
   onSyncPulseCheck,
   pulseCheckSynced,
@@ -77,6 +80,14 @@ export default function EventBanner({
     }
   };
 
+  const handleDismiss = (event) => {
+    switch (event.type) {
+      case 'adrenaline': onDismissAdrenaline(); break;
+      case 'amiodarone': onDismissAmiodarone(event.dose); break;
+      case 'lidocaine': onDismissLidocaine(event.dose); break;
+    }
+  };
+
   const isMedicationButton = (type) => {
     return ['adrenaline', 'amiodarone', 'lidocaine'].includes(type);
   };
@@ -131,14 +142,27 @@ export default function EventBanner({
               <div className="text-xs opacity-75">{event.timing}</div>
             
               {(event.status === 'active' || (event.status === 'pending' && isMedicationButton(event.type))) && (
-                <Button 
-                  size="sm" 
-                  className={`mt-2 w-full ${event.status === 'active' ? getButtonColors(event.type) : 'bg-slate-600 hover:bg-slate-500'} text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed`}
-                  onClick={() => handleConfirm(event)}
-                  disabled={disabled}
-                >
-                  <Check className="w-4 h-4 mr-1" /> {event.status === 'active' ? 'Confirm' : 'Give'}
-                </Button>
+                <div className="mt-2 w-full space-y-1">
+                  <Button 
+                    size="sm" 
+                    className={`w-full ${event.status === 'active' ? getButtonColors(event.type) : 'bg-slate-600 hover:bg-slate-500'} text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed`}
+                    onClick={() => handleConfirm(event)}
+                    disabled={disabled}
+                  >
+                    <Check className="w-4 h-4 mr-1" /> {event.status === 'active' ? 'Confirm' : 'Give'}
+                  </Button>
+                  {event.status === 'active' && isMedicationButton(event.type) && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="w-full border-slate-600 text-slate-400 hover:bg-slate-700 hover:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleDismiss(event)}
+                      disabled={disabled}
+                    >
+                      Dismiss
+                    </Button>
+                  )}
+                </div>
               )}
               
               {event.status === 'completed' && (

@@ -569,6 +569,15 @@ export default function CPRTracker() {
     });
   };
 
+  const handleDismissAdrenaline = () => {
+    playClick();
+    setAdrenalineDue(false);
+    toast.info('Adrenaline alarm dismissed', {
+      duration: 4000,
+      position: 'bottom-center'
+    });
+  };
+
   const handleAdrenalineFrequencyChange = (newFrequency) => {
     setAdrenalineFrequency(newFrequency);
   };
@@ -593,6 +602,19 @@ export default function CPRTracker() {
           setEvents(prev => prev.slice(0, -1));
         }
       }
+    });
+  };
+
+  const handleDismissAmiodarone = (dose) => {
+    playClick();
+    if (dose === 300) {
+      setAmiodarone300Due(false);
+    } else if (dose === 150) {
+      setAmiodarone150Due(false);
+    }
+    toast.info(`Amiodarone ${dose}mg alarm dismissed`, {
+      duration: 4000,
+      position: 'bottom-center'
     });
   };
 
@@ -658,6 +680,19 @@ export default function CPRTracker() {
           setEvents(prev => prev.slice(0, -1));
         }
       }
+    });
+  };
+
+  const handleDismissLidocaine = (dose) => {
+    playClick();
+    if (dose === 1.5) {
+      setLidocaine1mgDue(false);
+    } else if (dose === 0.75) {
+      setLidocaine05mgDue(false);
+    }
+    toast.info(`Xylocaine ${dose} mg/kg alarm dismissed`, {
+      duration: 4000,
+      position: 'bottom-center'
     });
   };
 
@@ -1148,8 +1183,11 @@ export default function CPRTracker() {
           onConfirmCompressorChange={handleConfirmCompressorChange}
           onConfirmPulseCheck={handleConfirmPulseCheck}
           onConfirmAdrenaline={handleConfirmAdrenaline}
+          onDismissAdrenaline={handleDismissAdrenaline}
           onConfirmAmiodarone={handleConfirmAmiodarone}
+          onDismissAmiodarone={handleDismissAmiodarone}
           onConfirmLidocaine={handleConfirmLidocaine}
+          onDismissLidocaine={handleDismissLidocaine}
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
           onSyncPulseCheck={handleSyncPulseCheck}
           pulseCheckSynced={pulseCheckSynced}
