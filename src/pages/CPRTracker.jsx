@@ -286,7 +286,7 @@ export default function CPRTracker() {
       },
       {
         type: 'compressor',
-        label: lucasActive ? 'Resume Chest Compressor' : 'Change Compressor',
+        label: lucasActive ? 'Resume Chest Compressor' : 'New Rescuer',
         timing: 'Every cycle',
         status: lucasActive ? 'pending' : (cycleComplete && compressorChanges < cycle ? 'active' : (compressorChanges >= cycle ? 'completed' : 'pending'))
       },
