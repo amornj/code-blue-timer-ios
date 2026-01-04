@@ -45,10 +45,6 @@ export default function Layout({ children, currentPageName }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
-              <div className="flex items-center gap-2">
-                <Activity className="w-8 h-8 text-red-500" />
-              </div>
-              
               <div className="flex gap-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
