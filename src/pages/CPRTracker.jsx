@@ -977,7 +977,7 @@ export default function CPRTracker() {
             <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
               Code Blue Timer
             </h1>
-            <p className="text-slate-400 mt-1">Realtime ACLS coach & Tracker</p>
+            <p className="text-slate-400 mt-1">Realtime ACLS Coach & Tracker</p>
           </div>
           
           <div className="flex flex-wrap items-center gap-3">

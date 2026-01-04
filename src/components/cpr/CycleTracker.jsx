@@ -80,8 +80,8 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
       </div>
 
       {/* Cycle Info */}
-      <div className="mb-4 pt-4 border-t border-slate-700">
-        <div className="flex items-center justify-center gap-3 mb-3">
+      <div className="flex items-center justify-between mb-4 pt-4 border-t border-slate-700">
+        <div className="flex items-center gap-3">
           <RefreshCw className={`w-5 h-5 ${isUrgent ? 'text-amber-400' : 'text-slate-400'}`} />
           <span className={`text-sm font-medium tracking-wide uppercase ${isUrgent ? 'text-amber-400' : 'text-slate-400'}`}>
             Cycle
@@ -97,8 +97,8 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
           >
             SYNC
           </Button>
-          <div className="text-4xl font-bold text-white">{cycle}</div>
         </div>
+        <div className="text-4xl font-bold text-white">{cycle}</div>
       </div>
       
       <div className="space-y-3">
