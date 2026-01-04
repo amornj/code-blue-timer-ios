@@ -232,11 +232,12 @@ export default function CPRTracker() {
     const shouldShowAmiodarone300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300;
     const shouldShowAmiodarone150 = isShockable && shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450;
 
-    // Lidocaine (Xylocaine) rules
-    const shouldShowLidocaine1mg = isShockable && shockCount >= 8 && lidocaineCumulativeDose === 0;
-    const shouldShowLidocaine05mg = isShockable && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 3 && (
-      (shockCount >= 11 && lidocaineCumulativeDose < 2.25) || (shockCount >= 14 && lidocaineCumulativeDose >= 2.25)
-    );
+    // Lidocaine (Xylocaine) rules - based on dose number
+    const lidocaineGivenCount = events.filter(e => e.type === 'lidocaine').length;
+    const shouldShowLidocaine1mg = isShockable && shockCount >= 8 && lidocaineGivenCount === 0;
+    const shouldShowLidocaine2nd = isShockable && shockCount >= 11 && lidocaineGivenCount === 1 && lidocaineCumulativeDose < 3;
+    const shouldShowLidocaine3rd = isShockable && shockCount >= 14 && lidocaineGivenCount === 2 && lidocaineCumulativeDose < 3;
+    const shouldShowLidocaine05mg = shouldShowLidocaine2nd || shouldShowLidocaine3rd;
 
     // Set due flags for tracking
     if (shouldShowAdrenaline && !adrenalineDue && !adrenalineDismissed) {
@@ -746,8 +747,9 @@ export default function CPRTracker() {
   const handleConfirmLidocaine = (doseOrEvent) => {
     if (typeof doseOrEvent === 'object') {
       // Called from EventBanner with event object, show dialog
-      // Determine which dose number based on cumulative dose
-      const doseNum = lidocaineCumulativeDose === 0 ? 1 : (lidocaineCumulativeDose < 2.25 ? 2 : 3);
+      // Determine which dose number based on how many times lidocaine was given
+      const lidocaineGivenCount = events.filter(e => e.type === 'lidocaine').length;
+      const doseNum = lidocaineGivenCount + 1; // 1, 2, or 3
       setLidocaineDoseNumber(doseNum);
       setLidocaineDosePerKg(doseNum === 1 ? 1.5 : 0.75); // Set default based on dose number
       setShowLidocaineDialog(true);
@@ -785,12 +787,13 @@ export default function CPRTracker() {
     setLidocaineCumulativeDose(prev => prev + lidocaineDosePerKg);
     setLastLidocaineTime(totalSeconds);
     
-    if (lidocaineDosePerKg === 1.5) {
+    // Clear the appropriate due/dismissed flags based on dose number
+    if (lidocaineDoseNumber === 1) {
       setLidocaine1mgDue(false);
-      setLidocaine1mgDismissed(false); // Clear dismissed flag when given
-    } else if (lidocaineDosePerKg === 0.75) {
+      setLidocaine1mgDismissed(false);
+    } else {
       setLidocaine05mgDue(false);
-      setLidocaine05mgDismissed(false); // Clear dismissed flag when given
+      setLidocaine05mgDismissed(false);
     }
     
     addEvent('lidocaine', `Xylocaine ${lidocaineDosePerKg} mg/kg (${totalDose}mg for ${patientWeight}kg) administered (cumulative: ${lidocaineCumulativeDose + lidocaineDosePerKg} mg/kg)`, { dose: lidocaineDosePerKg });
