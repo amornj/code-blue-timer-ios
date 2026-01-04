@@ -46,16 +46,16 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
       <div className="mb-6 text-center relative">
         {/* Mode Toggle - Top Right (Vertical) */}
         <div className="absolute top-0 right-0 flex flex-col items-center gap-2">
-          <span className={`text-xs font-bold uppercase tracking-wider ${soundEnabled ? 'text-green-400' : 'text-slate-400'}`}>
+          <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${soundEnabled ? 'text-green-400' : 'text-slate-500'}`}>
             COACH
           </span>
           <Switch
             checked={soundEnabled}
             onCheckedChange={handleModeToggle}
             disabled={!hasStarted}
-            className="data-[state=checked]:bg-green-600 rotate-90"
+            className="data-[state=checked]:bg-green-600 rotate-90 transition-all duration-300"
           />
-          <span className={`text-xs font-bold uppercase tracking-wider ${!soundEnabled ? 'text-blue-400' : 'text-slate-400'}`}>
+          <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${!soundEnabled ? 'text-green-400' : 'text-slate-500'}`}>
             TRACK
           </span>
         </div>
