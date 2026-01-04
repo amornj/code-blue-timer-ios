@@ -47,7 +47,6 @@ export default function Layout({ children, currentPageName }) {
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-2">
                 <Activity className="w-8 h-8 text-red-500" />
-                <span className="text-xl font-bold text-white">CPR Tracker</span>
               </div>
               
               <div className="flex gap-1">
