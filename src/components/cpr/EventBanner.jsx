@@ -125,7 +125,7 @@ export default function EventBanner({
                 onClick={onSyncPulseCheck}
                 disabled={disabled || pulseCheckSynced}
                 size="sm"
-                className={`h-5 px-2 text-[9px] font-medium border-0 ${
+                className={`h-6 px-2.5 text-[11px] font-medium border-0 ${
                   pulseCheckSynced 
                     ? 'bg-green-600 hover:bg-green-700 text-white' 
                     : 'bg-black/30 hover:bg-black/40 text-slate-300'
