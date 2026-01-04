@@ -8,7 +8,6 @@ import { Play, Square, AlertTriangle, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { toast, Toaster } from 'sonner';
 
 import CPRTimer from '@/components/cpr/CPRTimer';
 import CycleTracker from '@/components/cpr/CycleTracker';
@@ -506,7 +505,9 @@ export default function CPRTracker() {
     setDiscretionaryMeds(prev => [...prev, medEntry]);
     addEvent('discretionary_med', `${medication} - ${dosage} administered`, { medication, dosage });
     
+
     // Update medication counter
+
     const medMapping = {
       'Bicarb': 'Sodium Bicarbonate',
       'Ca': 'Calcium',
@@ -562,7 +563,10 @@ export default function CPRTracker() {
     setDiscretionaryMeds(prev => [...prev, { medication: procedure, dosage: procedure, ...procEntry }]);
     addEvent('procedure', `${procedure}`, { procedure });
     
+    
+
     // Mark procedure as used
+
     const procMapping = {
       'A line': 'A line insertion',
       'Central line': 'Central line insertion',
@@ -830,7 +834,7 @@ export default function CPRTracker() {
       yPos = doc.lastAutoTable.finalY + 8;
     }
 
-    // Notes section - wrap text properly within A4 margins
+    // Notes section
     if (doctorNotes) {
       if (yPos > 250) {
         doc.addPage();
@@ -838,11 +842,11 @@ export default function CPRTracker() {
       }
       doc.setFontSize(11);
       doc.text('Note1 (During CPR)', 15, yPos);
-      yPos += 6;
-      doc.setFontSize(9);
-      const splitNotes = doc.splitTextToSize(doctorNotes, 170);
+      yPos += 5;
+      doc.setFontSize(8);
+      const splitNotes = doc.splitTextToSize(doctorNotes, 180);
       doc.text(splitNotes, 15, yPos);
-      yPos += splitNotes.length * 5 + 6;
+      yPos += splitNotes.length * 4 + 5;
     }
 
     if (notes) {
@@ -852,9 +856,9 @@ export default function CPRTracker() {
       }
       doc.setFontSize(11);
       doc.text('Note2 (End Session)', 15, yPos);
-      yPos += 6;
-      doc.setFontSize(9);
-      const splitNote2 = doc.splitTextToSize(notes, 170);
+      yPos += 5;
+      doc.setFontSize(8);
+      const splitNote2 = doc.splitTextToSize(notes, 180);
       doc.text(splitNote2, 15, yPos);
     }
 
@@ -876,7 +880,9 @@ export default function CPRTracker() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-6">
+
       <Toaster position="bottom-center" richColors />
+
 
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-6">
