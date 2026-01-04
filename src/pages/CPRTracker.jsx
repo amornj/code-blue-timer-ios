@@ -237,17 +237,19 @@ export default function CPRTracker() {
       }
     }
     
-    // Determine adrenaline status
+    // Determine adrenaline status - only in COACH mode
     let adrenalineStatus = 'pending';
-    if (adrenalineDue) {
-      adrenalineStatus = 'active';
-    } else if (timeSinceLastAdrenaline !== null) {
-      const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
-      if (timeUntilNext > 30) {
-        adrenalineStatus = 'completed';
+    if (soundEnabled) {
+      if (adrenalineDue) {
+        adrenalineStatus = 'active';
+      } else if (timeSinceLastAdrenaline !== null) {
+        const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
+        if (timeUntilNext > 30) {
+          adrenalineStatus = 'completed';
+        }
       }
     }
-    
+
     const newBannerEvents = [
       {
         type: 'pulse',
@@ -261,35 +263,36 @@ export default function CPRTracker() {
         timing: 'Every cycle',
         status: lucasActive ? 'pending' : (cycleComplete && compressorChanges < cycle ? 'active' : (compressorChanges >= cycle ? 'completed' : 'pending'))
       },
-      {
+      // Only show medication alerts in COACH mode
+      ...(soundEnabled ? [{
         type: 'adrenaline',
         label: 'Adrenaline 1mg',
         timing: `Every ${adrenalineFrequency} minutes`,
         status: adrenalineStatus,
         frequency: adrenalineFrequency
-      },
-      ...(isShockable && amiodaroneTotal < 300 ? [{
+      }] : []),
+      ...(soundEnabled && isShockable && amiodaroneTotal < 300 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 300mg',
         timing: 'After 3rd shock',
         dose: 300,
         status: amiodarone300Due ? 'active' : 'pending'
       }] : []),
-      ...(isShockable && amiodaroneTotal >= 300 && amiodaroneTotal < 450 ? [{
+      ...(soundEnabled && isShockable && amiodaroneTotal >= 300 && amiodaroneTotal < 450 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 150mg',
         timing: 'After 5th shock',
         dose: 150,
         status: amiodarone150Due ? 'active' : 'pending'
       }] : []),
-      ...(isShockable && lidocaineCumulativeDose < 1.5 ? [{
+      ...(soundEnabled && isShockable && lidocaineCumulativeDose < 1.5 ? [{
         type: 'lidocaine',
         label: 'Xylocaine 1.5 mg/kg',
         timing: 'After 8th shock',
         dose: 1.5,
         status: lidocaine1mgDue ? 'active' : 'pending'
       }] : []),
-      ...(isShockable && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 3 ? [{
+      ...(soundEnabled && isShockable && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 3 ? [{
         type: 'lidocaine',
         label: 'Xylocaine 0.75 mg/kg',
         timing: 'After 11th, 14th shock',
@@ -458,6 +461,18 @@ export default function CPRTracker() {
     setShockDeliveredThisCycle(false); // Reset shock flag for new cycle
     setRhythmSelectionStage('unselected'); // Allow rhythm selection for new cycle
     addEvent('cycle', `Cycle ${currentCycle + 1} started`);
+  };
+
+  const handleSyncCycle = () => {
+    playClick();
+    const newCount = pulseChecks + 1;
+    setPulseChecks(newCount);
+    addEvent('pulse', `Pulse check performed (Cycle ${currentCycle}) - Synced`);
+    setCurrentCycle(prev => prev + 1);
+    setCycleSeconds(0);
+    setShockDeliveredThisCycle(false);
+    setRhythmSelectionStage('unselected');
+    addEvent('cycle', `Cycle ${currentCycle + 1} started - Synced`);
   };
 
   const handleConfirmAdrenaline = () => {
@@ -942,6 +957,7 @@ export default function CPRTracker() {
           soundEnabled={soundEnabled}
           onSoundToggle={setSoundEnabled}
           hasStarted={hasStarted}
+          onSyncCycle={handleSyncCycle}
         />
 
         {/* Rhythm Selector */}

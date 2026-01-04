@@ -4,9 +4,10 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted }) {
+export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted, onSyncCycle }) {
   const [showModeDialog, setShowModeDialog] = useState(false);
   const [pendingMode, setPendingMode] = useState(null);
+  const [syncPressed, setSyncPressed] = useState(false);
   
   const progress = (cycleSeconds / 120) * 100;
   const remainingSeconds = 120 - cycleSeconds;
@@ -32,6 +33,12 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
   const dismissModeChange = () => {
     setShowModeDialog(false);
     setPendingMode(null);
+  };
+
+  const handleSync = () => {
+    setSyncPressed(true);
+    onSyncCycle();
+    setTimeout(() => setSyncPressed(false), 2000);
   };
 
   const isUrgent = remainingSeconds <= 10;
@@ -78,6 +85,17 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
           <span className={`text-sm font-medium tracking-wide uppercase ${isUrgent ? 'text-amber-400' : 'text-slate-400'}`}>
             Cycle
           </span>
+          <Button
+            onClick={handleSync}
+            disabled={!hasStarted}
+            className={`h-7 px-4 rounded-full text-xs font-semibold transition-all ${
+              syncPressed 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'bg-slate-600 hover:bg-slate-500 text-slate-300'
+            }`}
+          >
+            SYNC
+          </Button>
         </div>
         <div className="text-4xl font-bold text-white">{cycle}</div>
       </div>
