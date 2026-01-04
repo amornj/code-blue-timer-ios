@@ -201,7 +201,7 @@ export default function CPRTracker() {
     // Check adrenaline timing
     const timeSinceLastAdrenaline = lastAdrenalineTime ? totalSeconds - lastAdrenalineTime : null;
     const adrenalineIntervalSeconds = adrenalineFrequency * 60; // Convert minutes to seconds
-    
+
     // Adrenaline rules:
     // - VF/pVT: First dose after 2nd shock, then every 3-5 minutes based on frequency
     // - PEA/Asystole: First dose at 10 seconds, then every 3-5 minutes based on frequency
@@ -210,43 +210,36 @@ export default function CPRTracker() {
       ? (isPEAorAsystole ? totalSeconds >= 10 : isShockable ? shockCount >= 2 : false)
       : (timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds);
 
+    // Check amiodarone timing - only for shockable rhythms
+    const shouldShowAmiodarone300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300;
+    const shouldShowAmiodarone150 = isShockable && shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450;
+
+    // Lidocaine (Xylocaine) rules
+    const shouldShowLidocaine1mg = isShockable && shockCount >= 8 && lidocaineCumulativeDose === 0;
+    const shouldShowLidocaine05mg = isShockable && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 3 && (
+      (shockCount >= 11 && lidocaineCumulativeDose < 2.25) || (shockCount >= 14 && lidocaineCumulativeDose >= 2.25)
+    );
+
+    // Set due flags for tracking
     if (shouldShowAdrenaline && !adrenalineDue && !adrenalineDismissed) {
       setAdrenalineDue(true);
     }
-    
-    // Check amiodarone timing - only for shockable rhythms
-    // Amiodarone rules:
-    // - 300mg after 3rd shock (when in shockable rhythm)
-    // - 150mg after 5th shock (when in shockable rhythm)
-    // - Max 450mg total per session
-    if (isShockable && amiodaroneTotal < 450) {
-      if (shockCount >= 3 && amiodaroneTotal < 300 && !amiodarone300Dismissed) {
-        setAmiodarone300Due(true);
-      }
-      if (shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450 && !amiodarone150Dismissed) {
-        setAmiodarone150Due(true);
-      }
+    if (shouldShowAmiodarone300 && !amiodarone300Due && !amiodarone300Dismissed) {
+      setAmiodarone300Due(true);
     }
-    
-    // Lidocaine (Xylocaine) rules
-    // - 1.5 mg/kg after 8th shock (when in shockable rhythm)
-    // - 0.75 mg/kg after 11th, 14th shock (when in shockable rhythm)
-    // - Max 3 mg/kg total per session
-    if (isShockable && lidocaineCumulativeDose < 3) {
-      if (shockCount >= 8 && lidocaineCumulativeDose === 0 && !lidocaine1mgDismissed) {
-        setLidocaine1mgDue(true);
-      }
-      if (shockCount >= 11 && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 2.25 && !lidocaine05mgDismissed) {
-        setLidocaine05mgDue(true);
-      }
-      if (shockCount >= 14 && lidocaineCumulativeDose >= 2.25 && lidocaineCumulativeDose < 3 && !lidocaine05mgDismissed) {
-        setLidocaine05mgDue(true);
-      }
+    if (shouldShowAmiodarone150 && !amiodarone150Due && !amiodarone150Dismissed) {
+      setAmiodarone150Due(true);
     }
-    
-    // Determine adrenaline status
+    if (shouldShowLidocaine1mg && !lidocaine1mgDue && !lidocaine1mgDismissed) {
+      setLidocaine1mgDue(true);
+    }
+    if (shouldShowLidocaine05mg && !lidocaine05mgDue && !lidocaine05mgDismissed) {
+      setLidocaine05mgDue(true);
+    }
+
+    // Determine adrenaline status - use shouldShow directly, not the state variable
     let adrenalineStatus = 'pending';
-    if (shouldShowAdrenaline && adrenalineDue) {
+    if (shouldShowAdrenaline && !adrenalineDismissed) {
       adrenalineStatus = soundEnabled ? 'active' : 'pending';
     } else if (timeSinceLastAdrenaline !== null) {
       const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
@@ -275,33 +268,33 @@ export default function CPRTracker() {
         status: adrenalineStatus,
         frequency: adrenalineFrequency
       },
-      ...(isShockable && amiodaroneTotal < 300 ? [{
+      ...(shouldShowAmiodarone300 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 300mg',
         timing: 'After 3rd shock',
         dose: 300,
-        status: soundEnabled && amiodarone300Due ? 'active' : 'pending'
+        status: (shouldShowAmiodarone300 && !amiodarone300Dismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
       }] : []),
-      ...(isShockable && amiodaroneTotal >= 300 && amiodaroneTotal < 450 ? [{
+      ...(shouldShowAmiodarone150 ? [{
         type: 'amiodarone',
         label: 'Amiodarone 150mg',
         timing: 'After 5th shock',
         dose: 150,
-        status: soundEnabled && amiodarone150Due ? 'active' : 'pending'
+        status: (shouldShowAmiodarone150 && !amiodarone150Dismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
       }] : []),
-      ...(isShockable && lidocaineCumulativeDose < 1.5 ? [{
+      ...(shouldShowLidocaine1mg ? [{
         type: 'lidocaine',
         label: 'Xylocaine 1.5 mg/kg',
         timing: 'After 8th shock',
         dose: 1.5,
-        status: soundEnabled && lidocaine1mgDue ? 'active' : 'pending'
+        status: (shouldShowLidocaine1mg && !lidocaine1mgDismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
       }] : []),
-      ...(isShockable && lidocaineCumulativeDose >= 1.5 && lidocaineCumulativeDose < 3 ? [{
+      ...(shouldShowLidocaine05mg ? [{
         type: 'lidocaine',
         label: 'Xylocaine 0.75 mg/kg',
         timing: 'After 11th, 14th shock',
         dose: 0.75,
-        status: soundEnabled && lidocaine05mgDue ? 'active' : 'pending'
+        status: (shouldShowLidocaine05mg && !lidocaine05mgDismissed) ? (soundEnabled ? 'active' : 'pending') : 'pending'
       }] : [])
     ];
     
