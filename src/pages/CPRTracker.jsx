@@ -1058,6 +1058,11 @@ export default function CPRTracker() {
 
   const handleShockDelivered = (energy) => {
     playClick();
+    const prevShockCount = shockCount;
+    const prevShocksInRhythm = shocksInCurrentShockableRhythm;
+    const prevCyclesWithShocks = new Set(cyclesWithShocks);
+    const prevShockDelivered = shockDeliveredThisCycle;
+    
     setShockCount(prev => prev + 1);
     setShocksInCurrentShockableRhythm(prev => prev + 1);
     
@@ -1068,6 +1073,21 @@ export default function CPRTracker() {
     addEvent('shock', `Shock delivered @ ${energy}J (Shock #${shockCount + 1})`, { 
       energy, 
       rhythmBefore: currentRhythm 
+    });
+    
+    toast.success(`Shock delivered @ ${energy}J`, {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setShockCount(prevShockCount);
+          setShocksInCurrentShockableRhythm(prevShocksInRhythm);
+          setCyclesWithShocks(prevCyclesWithShocks);
+          setShockDeliveredThisCycle(prevShockDelivered);
+          setEvents(prev => prev.slice(0, -1));
+        }
+      }
     });
   };
 

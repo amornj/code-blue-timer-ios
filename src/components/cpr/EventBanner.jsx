@@ -138,9 +138,6 @@ export default function EventBanner({
           
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-center text-center gap-2 flex-1">
-              <div className="p-2 rounded-full bg-black/20">
-                {event.type === 'compressor' ? <Heart className="w-6 h-6" /> : getIcon(event.type)}
-              </div>
               <div className="font-semibold text-sm">{event.label}</div>
               <div className="text-xs opacity-75">{event.timing}</div>
             
