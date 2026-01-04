@@ -96,21 +96,6 @@ export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, on
           </div>
         </div>
 
-        {/* Current Status */}
-        <div className={`rounded-xl p-4 text-center font-bold text-lg ${
-          isShockable 
-            ? 'bg-red-900/30 border border-red-600 text-red-300' 
-            : 'bg-blue-900/30 border border-blue-600 text-blue-300'
-        }`}>
-          {currentRhythm ? (
-            <>
-              {isShockable ? '⚡ SHOCKABLE RHYTHM' : '💙 NON-SHOCKABLE RHYTHM'}
-            </>
-          ) : (
-            <span className="text-slate-400">Select rhythm after pulse check</span>
-          )}
-        </div>
-
         {/* Shock Button - Only shown when shockable rhythm selected */}
         {isShockable && (
           <Button
