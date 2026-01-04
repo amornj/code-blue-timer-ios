@@ -80,8 +80,7 @@ export default function Layout({ children, currentPageName }) {
                     size="sm"
                     className="border-slate-700 text-slate-300 hover:bg-slate-800"
                   >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
+                    <LogOut className="w-4 h-4" />
                   </Button>
                   <span className="text-xs text-slate-400 truncate max-w-[150px]">{user?.email}</span>
                 </div>
