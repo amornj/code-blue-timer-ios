@@ -522,7 +522,17 @@ export default function CPRTracker() {
     });
   };
 
+  const [showLidocaineDialog, setShowLidocaineDialog] = useState(false);
+  const [lidocaineDosePerKg, setLidocaineDosePerKg] = useState(1.5);
+  const [patientWeight, setPatientWeight] = useState(60);
+
   const handleConfirmLidocaine = (dose) => {
+    if (typeof dose === 'object') {
+      // Called from EventBanner, show dialog
+      setShowLidocaineDialog(true);
+      return;
+    }
+    
     playClick();
     setLidocaineCumulativeDose(prev => prev + dose);
     setLastLidocaineTime(totalSeconds);
@@ -540,6 +550,35 @@ export default function CPRTracker() {
         label: 'Undo',
         onClick: () => {
           setLidocaineCumulativeDose(prev => prev - dose);
+          setEvents(prev => prev.slice(0, -1));
+        }
+      }
+    });
+  };
+
+  const handleLidocaineSubmit = () => {
+    const totalDose = lidocaineDosePerKg * patientWeight;
+    playClick();
+    setLidocaineCumulativeDose(prev => prev + lidocaineDosePerKg);
+    setLastLidocaineTime(totalSeconds);
+    
+    if (lidocaineDosePerKg === 1.5) {
+      setLidocaine1mgDue(false);
+    } else if (lidocaineDosePerKg === 0.75) {
+      setLidocaine05mgDue(false);
+    }
+    
+    addEvent('lidocaine', `Xylocaine ${lidocaineDosePerKg} mg/kg (${totalDose}mg for ${patientWeight}kg) administered (cumulative: ${lidocaineCumulativeDose + lidocaineDosePerKg} mg/kg)`, { dose: lidocaineDosePerKg });
+    
+    setShowLidocaineDialog(false);
+    
+    toast.success(`Xylocaine ${lidocaineDosePerKg} mg/kg (${totalDose}mg) administered`, {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setLidocaineCumulativeDose(prev => prev - lidocaineDosePerKg);
           setEvents(prev => prev.slice(0, -1));
         }
       }
@@ -1091,6 +1130,69 @@ export default function CPRTracker() {
                   setShowEndDialog(true);
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lidocaine Dialog */}
+      <Dialog open={showLidocaineDialog} onOpenChange={setShowLidocaineDialog}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              Administer Xylocaine (Lidocaine)
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div>
+              <label className="text-sm font-medium text-slate-300 mb-3 block">Dose per kg</label>
+              <Select value={lidocaineDosePerKg.toString()} onValueChange={(val) => setLidocaineDosePerKg(parseFloat(val))}>
+                <SelectTrigger className="bg-slate-800 border-slate-600 text-white h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  <SelectItem value="0.5" className="text-white">0.5 mg/kg</SelectItem>
+                  <SelectItem value="0.75" className="text-white">0.75 mg/kg</SelectItem>
+                  <SelectItem value="1.0" className="text-white">1.0 mg/kg</SelectItem>
+                  <SelectItem value="1.5" className="text-white">1.5 mg/kg</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-300 mb-3 block">Patient Weight (kg)</label>
+              <input
+                type="number"
+                value={patientWeight}
+                onChange={(e) => setPatientWeight(parseFloat(e.target.value) || 0)}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white text-lg"
+                min="1"
+                max="200"
+              />
+            </div>
+
+            <div className="bg-blue-900/30 border border-blue-500 rounded-lg p-4">
+              <div className="text-blue-300 text-sm mb-1">Total Dose</div>
+              <div className="text-white text-3xl font-bold">
+                {(lidocaineDosePerKg * patientWeight).toFixed(1)} mg
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowLidocaineDialog(false)}
+                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleLidocaineSubmit}
+                className="flex-1 bg-teal-600 hover:bg-teal-700"
               >
                 Confirm
               </Button>

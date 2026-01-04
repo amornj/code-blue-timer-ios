@@ -20,18 +20,11 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
   };
 
   const handleModeToggle = () => {
-    const newMode = !soundEnabled;
-    setPendingMode(newMode);
-    setShowModeDialog(true);
-  };
-
-  const confirmModeChange = () => {
     const prevMode = soundEnabled;
-    onSoundToggle(pendingMode);
-    setShowModeDialog(false);
-    setPendingMode(null);
+    const newMode = !soundEnabled;
+    onSoundToggle(newMode);
     
-    toast.success(`Switched to ${pendingMode ? 'COACH' : 'TRACK'} mode`, {
+    toast.success(`Switched to ${newMode ? 'COACH' : 'TRACK'} mode`, {
       duration: 4000,
       position: 'bottom-center',
       action: {
@@ -41,11 +34,6 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
         }
       }
     });
-  };
-
-  const dismissModeChange = () => {
-    setShowModeDialog(false);
-    setPendingMode(null);
   };
 
   const handleSync = () => {
@@ -92,8 +80,8 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
       </div>
 
       {/* Cycle Info */}
-      <div className="flex items-center justify-between mb-4 pt-4 border-t border-slate-700">
-        <div className="flex items-center gap-3">
+      <div className="mb-4 pt-4 border-t border-slate-700">
+        <div className="flex items-center justify-center gap-3 mb-3">
           <RefreshCw className={`w-5 h-5 ${isUrgent ? 'text-amber-400' : 'text-slate-400'}`} />
           <span className={`text-sm font-medium tracking-wide uppercase ${isUrgent ? 'text-amber-400' : 'text-slate-400'}`}>
             Cycle
@@ -109,8 +97,8 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
           >
             SYNC
           </Button>
+          <div className="text-4xl font-bold text-white">{cycle}</div>
         </div>
-        <div className="text-4xl font-bold text-white">{cycle}</div>
       </div>
       
       <div className="space-y-3">
@@ -161,40 +149,6 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
         </div>
         </div>
 
-        {/* Mode Change Confirmation Dialog */}
-        <Dialog open={showModeDialog} onOpenChange={setShowModeDialog}>
-          <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-xl">
-                {pendingMode ? 'Switch to COACH Mode?' : 'Switch to TRACK Mode?'}
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <p className="text-slate-300 text-sm">
-                {pendingMode 
-                  ? 'COACH mode provides audio guidance and alerts during CPR.' 
-                  : 'TRACK mode records CPR data without audio guidance.'}
-              </p>
-
-              <div className="flex gap-3 pt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={dismissModeChange}
-                  className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={confirmModeChange}
-                  className={`flex-1 ${pendingMode ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-                >
-                  Confirm
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
         </div>
         );
         }
