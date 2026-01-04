@@ -52,6 +52,21 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
     }`}>
       {/* Total CPR Time */}
       <div className="mb-6 text-center relative">
+        {/* Sync Button - Top Left */}
+        <div className="absolute top-0 left-0">
+          <Button
+            onClick={handleSync}
+            disabled={!hasStarted}
+            className={`h-7 px-4 rounded-full text-xs font-semibold transition-all ${
+              syncPressed 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'bg-slate-600 hover:bg-slate-500 text-slate-300'
+            }`}
+          >
+            SYNC
+          </Button>
+        </div>
+
         {/* Mode Toggle - Top Right (Vertical) */}
         <div className="absolute top-0 right-0 flex flex-col items-center gap-2">
           <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${soundEnabled ? 'text-green-400' : 'text-slate-500'}`}>
@@ -86,17 +101,6 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
           <span className={`text-sm font-medium tracking-wide uppercase ${isUrgent ? 'text-amber-400' : 'text-slate-400'}`}>
             Cycle
           </span>
-          <Button
-            onClick={handleSync}
-            disabled={!hasStarted}
-            className={`h-7 px-4 rounded-full text-xs font-semibold transition-all ${
-              syncPressed 
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
-                : 'bg-slate-600 hover:bg-slate-500 text-slate-300'
-            }`}
-          >
-            SYNC
-          </Button>
         </div>
         <div className="text-4xl font-bold text-white">{cycle}</div>
       </div>

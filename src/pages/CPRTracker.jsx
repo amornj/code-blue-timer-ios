@@ -700,6 +700,9 @@ export default function CPRTracker() {
     if (rhythmSelectionStage === 'selected') return; // Cannot change if already selected
     
     const prevRhythm = currentRhythm;
+    const prevStage = rhythmSelectionStage;
+    const prevInitialRhythm = initialRhythm;
+    
     setCurrentRhythm(rhythm);
     setRhythmSelectionStage('selected'); // Lock rhythm selection
     
@@ -718,6 +721,22 @@ export default function CPRTracker() {
     }
     
     addEvent('rhythm', `Rhythm identified: ${rhythm}${prevRhythm ? ` (was ${prevRhythm})` : ''}`);
+    
+    toast.success(`Rhythm selected: ${rhythm}`, {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setCurrentRhythm(prevRhythm);
+          setRhythmSelectionStage(prevStage);
+          if (!prevInitialRhythm) {
+            setInitialRhythm(null);
+          }
+          setEvents(prev => prev.slice(0, -1));
+        }
+      }
+    });
   };
 
   const handleShockDelivered = (energy) => {
