@@ -883,9 +883,9 @@ export default function CPRTracker() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
-              CPR Tracker
+              Code Blue Timer
             </h1>
-            <p className="text-slate-400 mt-1">ACLS Cardiac Arrest Protocol</p>
+            <p className="text-slate-400 mt-1">Realtime ACLS coach & Tracker</p>
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
