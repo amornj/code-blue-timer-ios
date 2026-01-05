@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Heart, Activity, Syringe, Check, AlertTriangle } from 'lucide-react';
+import { Heart, Activity, Syringe, Check, AlertTriangle, Clock } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
@@ -10,16 +10,23 @@ export default function EventBanner({
   onConfirmPulseCheck,
   onConfirmAdrenaline,
   onDismissAdrenaline,
+  onSnoozeAdrenaline,
   onConfirmAmiodarone,
   onDismissAmiodarone,
+  onSnoozeAmiodarone,
   onConfirmLidocaine,
   onDismissLidocaine,
+  onSnoozeLidocaine,
   onAdrenalineFrequencyChange,
   onSyncPulseCheck,
   pulseCheckSynced,
   lucasActive,
   onToggleLucas,
-  disabled = false
+  disabled = false,
+  soundEnabled = false,
+  adrenalineSnoozed = false,
+  amiodaroneSnoozed = false,
+  lidocaineSnoozed = false
 }) {
   const adrenalineRef = useRef(null);
 
@@ -91,6 +98,23 @@ export default function EventBanner({
     }
   };
 
+  const handleSnooze = (event) => {
+    switch (event.type) {
+      case 'adrenaline': onSnoozeAdrenaline(); break;
+      case 'amiodarone': onSnoozeAmiodarone(); break;
+      case 'lidocaine': onSnoozeLidocaine(); break;
+    }
+  };
+
+  const isSnoozed = (type) => {
+    switch (type) {
+      case 'adrenaline': return adrenalineSnoozed;
+      case 'amiodarone': return amiodaroneSnoozed;
+      case 'lidocaine': return lidocaineSnoozed;
+      default: return false;
+    }
+  };
+
   const isMedicationButton = (type) => {
     return ['adrenaline', 'amiodarone', 'lidocaine'].includes(type);
   };
@@ -141,7 +165,7 @@ export default function EventBanner({
               <div className="font-semibold text-sm">{event.label}</div>
               <div className="text-xs opacity-75">{event.timing}</div>
             
-              {(event.status === 'active' || (event.status === 'pending' && isMedicationButton(event.type))) && (
+              {(event.status === 'active' || (event.status === 'pending' && isMedicationButton(event.type)) || isSnoozed(event.type)) && (
                 <div className="mt-2 w-full space-y-1">
                   <Button 
                     size="sm" 
@@ -151,6 +175,18 @@ export default function EventBanner({
                   >
                     <Check className="w-4 h-4 mr-1" /> {event.status === 'active' ? 'Confirm' : 'Give'}
                   </Button>
+                  {/* Snooze button - only in coach mode for active medication alerts */}
+                  {event.status === 'active' && isMedicationButton(event.type) && soundEnabled && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="w-full border-amber-600 text-amber-400 hover:bg-amber-900/50 hover:text-amber-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleSnooze(event)}
+                      disabled={disabled}
+                    >
+                      <Clock className="w-4 h-4 mr-1" /> Snooze (90s)
+                    </Button>
+                  )}
                   {event.status === 'active' && isMedicationButton(event.type) && (
                     <Button 
                       size="sm" 
@@ -161,6 +197,12 @@ export default function EventBanner({
                     >
                       Dismiss
                     </Button>
+                  )}
+                  {/* Show snoozed state */}
+                  {isSnoozed(event.type) && event.status !== 'active' && (
+                    <div className="text-xs text-amber-400 text-center mt-1 flex items-center justify-center gap-1">
+                      <Clock className="w-3 h-3" /> Snoozed
+                    </div>
                   )}
                 </div>
               )}
