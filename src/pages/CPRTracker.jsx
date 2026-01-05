@@ -74,6 +74,12 @@ export default function CPRTracker() {
   const [lidocaine1mgDismissed, setLidocaine1mgDismissed] = useState(false);
   const [lidocaine05mgDismissed, setLidocaine05mgDismissed] = useState(false);
   
+  // Track snoozed alarms (coach mode only)
+  const [adrenalineSnoozed, setAdrenalineSnoozed] = useState(false);
+  const [amiodaroneSnoozed, setAmiodaroneSnoozed] = useState(false);
+  const [lidocaineSnoozed, setLidocaineSnoozed] = useState(false);
+  const snoozeTimerRefs = useRef({ adrenaline: null, amiodarone: null, lidocaine: null });
+  
   // Lidocaine tracking
   const [lidocaineCumulativeDose, setLidocaineCumulativeDose] = useState(0); // in mg/kg
   const [lastLidocaineTime, setLastLidocaineTime] = useState(null);
@@ -461,7 +467,15 @@ export default function CPRTracker() {
     setLidocaine1mgDismissed(false);
     setLidocaine05mgDismissed(false);
     setShockCountAtRhythmChange(null);
-  };
+    setAdrenalineSnoozed(false);
+    setAmiodaroneSnoozed(false);
+    setLidocaineSnoozed(false);
+    // Clear any active snooze timers
+    Object.values(snoozeTimerRefs.current).forEach(timer => {
+      if (timer) clearTimeout(timer);
+    });
+    snoozeTimerRefs.current = { adrenaline: null, amiodarone: null, lidocaine: null };
+    };
 
 
 
@@ -619,7 +633,7 @@ export default function CPRTracker() {
     const prevDismissed = adrenalineDismissed;
     setAdrenalineDue(false);
     setAdrenalineDismissed(true);
-    
+
     toast.info('Adrenaline alarm dismissed', {
       duration: 4000,
       position: 'bottom-center',
@@ -628,6 +642,36 @@ export default function CPRTracker() {
         onClick: () => {
           setAdrenalineDismissed(prevDismissed);
           setAdrenalineDue(true);
+        }
+      }
+    });
+  };
+
+  const handleSnoozeAdrenaline = () => {
+    playClick();
+    setAdrenalineSnoozed(true);
+
+    // Clear any existing timer
+    if (snoozeTimerRefs.current.adrenaline) {
+      clearTimeout(snoozeTimerRefs.current.adrenaline);
+    }
+
+    // Set timer to re-enable alarm after 90 seconds
+    snoozeTimerRefs.current.adrenaline = setTimeout(() => {
+      setAdrenalineSnoozed(false);
+    }, 90000);
+
+    toast.info('Adrenaline alarm snoozed for 90 seconds', {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (snoozeTimerRefs.current.adrenaline) {
+            clearTimeout(snoozeTimerRefs.current.adrenaline);
+            snoozeTimerRefs.current.adrenaline = null;
+          }
+          setAdrenalineSnoozed(false);
         }
       }
     });
@@ -714,17 +758,17 @@ export default function CPRTracker() {
 
   const handleDismissAmiodarone = (dose) => {
     playClick();
-    
+
     // Determine which dose to dismiss based on current state
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const shouldDismiss300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300 && !amiodarone300Dismissed;
     const shouldDismiss150 = isShockable && shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450 && !amiodarone150Dismissed;
-    
+
     if (shouldDismiss300) {
       const prevDismissed = amiodarone300Dismissed;
       setAmiodarone300Due(false);
       setAmiodarone300Dismissed(true);
-      
+
       toast.info('Amiodarone 300mg alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
@@ -740,7 +784,7 @@ export default function CPRTracker() {
       const prevDismissed = amiodarone150Dismissed;
       setAmiodarone150Due(false);
       setAmiodarone150Dismissed(true);
-      
+
       toast.info('Amiodarone 150mg alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
@@ -753,6 +797,36 @@ export default function CPRTracker() {
         }
       });
     }
+  };
+
+  const handleSnoozeAmiodarone = () => {
+    playClick();
+    setAmiodaroneSnoozed(true);
+
+    // Clear any existing timer
+    if (snoozeTimerRefs.current.amiodarone) {
+      clearTimeout(snoozeTimerRefs.current.amiodarone);
+    }
+
+    // Set timer to re-enable alarm after 90 seconds
+    snoozeTimerRefs.current.amiodarone = setTimeout(() => {
+      setAmiodaroneSnoozed(false);
+    }, 90000);
+
+    toast.info('Amiodarone alarm snoozed for 90 seconds', {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (snoozeTimerRefs.current.amiodarone) {
+            clearTimeout(snoozeTimerRefs.current.amiodarone);
+            snoozeTimerRefs.current.amiodarone = null;
+          }
+          setAmiodaroneSnoozed(false);
+        }
+      }
+    });
   };
 
   const [showLidocaineDialog, setShowLidocaineDialog] = useState(false);
@@ -844,7 +918,7 @@ export default function CPRTracker() {
 
   const handleDismissLidocaine = (dose) => {
     playClick();
-    
+
     // Determine which dose to dismiss based on current state
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const lidocaineGivenCount = events.filter(e => e.type === 'lidocaine').length;
@@ -856,12 +930,12 @@ export default function CPRTracker() {
       (shockCount >= 20 && lidocaineGivenCount === 4) ||
       (shockCount >= 23 && lidocaineGivenCount >= 5)
     );
-    
+
     if (shouldDismiss1mg) {
       const prevDismissed = lidocaine1mgDismissed;
       setLidocaine1mgDue(false);
       setLidocaine1mgDismissed(true);
-      
+
       toast.info('Xylocaine 1st dose alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
@@ -877,7 +951,7 @@ export default function CPRTracker() {
       const prevDismissed = lidocaine05mgDismissed;
       setLidocaine05mgDue(false);
       setLidocaine05mgDismissed(true);
-      
+
       toast.info('Xylocaine subsequent dose alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
@@ -890,6 +964,36 @@ export default function CPRTracker() {
         }
       });
     }
+  };
+
+  const handleSnoozeLidocaine = () => {
+    playClick();
+    setLidocaineSnoozed(true);
+
+    // Clear any existing timer
+    if (snoozeTimerRefs.current.lidocaine) {
+      clearTimeout(snoozeTimerRefs.current.lidocaine);
+    }
+
+    // Set timer to re-enable alarm after 90 seconds
+    snoozeTimerRefs.current.lidocaine = setTimeout(() => {
+      setLidocaineSnoozed(false);
+    }, 90000);
+
+    toast.info('Xylocaine alarm snoozed for 90 seconds', {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (snoozeTimerRefs.current.lidocaine) {
+            clearTimeout(snoozeTimerRefs.current.lidocaine);
+            snoozeTimerRefs.current.lidocaine = null;
+          }
+          setLidocaineSnoozed(false);
+        }
+      }
+    });
   };
 
   const handleAddDiscretionaryMed = ({ medication, dosage }) => {
