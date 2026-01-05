@@ -269,7 +269,7 @@ export default function CPRTracker() {
 
     // Determine adrenaline status - use shouldShow directly, not the state variable
     let adrenalineStatus = 'pending';
-    if (shouldShowAdrenaline && !adrenalineDismissed) {
+    if (shouldShowAdrenaline && !adrenalineDismissed && !adrenalineSnoozed) {
       adrenalineStatus = soundEnabled ? 'active' : 'pending';
     } else if (timeSinceLastAdrenaline !== null) {
       const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
@@ -312,8 +312,8 @@ export default function CPRTracker() {
         dose: null, // Always use dialog for dose selection
         status: (() => {
           if (inTrackMode) return 'pending';
-          // Coach mode: check if any amiodarone dose is due
-          if ((shouldShowAmiodarone300 && !amiodarone300Dismissed) || (shouldShowAmiodarone150 && !amiodarone150Dismissed)) {
+          // Coach mode: check if any amiodarone dose is due (and not snoozed)
+          if ((shouldShowAmiodarone300 && !amiodarone300Dismissed && !amiodaroneSnoozed) || (shouldShowAmiodarone150 && !amiodarone150Dismissed && !amiodaroneSnoozed)) {
             return 'active';
           }
           return 'pending';
@@ -327,8 +327,8 @@ export default function CPRTracker() {
         dose: null, // Always use dialog for dose selection
         status: (() => {
           if (inTrackMode) return 'pending';
-          // Coach mode: check if any lidocaine dose is due
-          if ((shouldShowLidocaine1mg && !lidocaine1mgDismissed) || (shouldShowLidocaine05mg && !lidocaine05mgDismissed)) {
+          // Coach mode: check if any lidocaine dose is due (and not snoozed)
+          if ((shouldShowLidocaine1mg && !lidocaine1mgDismissed && !lidocaineSnoozed) || (shouldShowLidocaine05mg && !lidocaine05mgDismissed && !lidocaineSnoozed)) {
             return 'active';
           }
           return 'pending';
@@ -337,7 +337,7 @@ export default function CPRTracker() {
     ];
 
     setBannerEvents(newBannerEvents);
-  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks, adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, lidocaine1mgDismissed, lidocaine05mgDismissed, shockCount]);
+  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks, adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, lidocaine1mgDismissed, lidocaine05mgDismissed, shockCount, adrenalineSnoozed, amiodaroneSnoozed, lidocaineSnoozed]);
 
   // Timer effect
   useEffect(() => {
@@ -1787,16 +1787,23 @@ export default function CPRTracker() {
           onConfirmPulseCheck={handleConfirmPulseCheck}
           onConfirmAdrenaline={handleConfirmAdrenaline}
           onDismissAdrenaline={handleDismissAdrenaline}
+          onSnoozeAdrenaline={handleSnoozeAdrenaline}
           onConfirmAmiodarone={handleConfirmAmiodarone}
           onDismissAmiodarone={handleDismissAmiodarone}
+          onSnoozeAmiodarone={handleSnoozeAmiodarone}
           onConfirmLidocaine={handleConfirmLidocaine}
           onDismissLidocaine={handleDismissLidocaine}
+          onSnoozeLidocaine={handleSnoozeLidocaine}
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
           onSyncPulseCheck={handleSyncPulseCheck}
           pulseCheckSynced={pulseCheckSynced}
           lucasActive={lucasActive}
           onToggleLucas={handleToggleLucas}
           disabled={!hasStarted}
+          soundEnabled={soundEnabled}
+          adrenalineSnoozed={adrenalineSnoozed}
+          amiodaroneSnoozed={amiodaroneSnoozed}
+          lidocaineSnoozed={lidocaineSnoozed}
         />
 
         {/* Common Medications */}
