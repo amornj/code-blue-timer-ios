@@ -74,12 +74,6 @@ export default function CPRTracker() {
   const [lidocaine1mgDismissed, setLidocaine1mgDismissed] = useState(false);
   const [lidocaine05mgDismissed, setLidocaine05mgDismissed] = useState(false);
   
-  // Track snoozed alarms (coach mode only)
-  const [adrenalineSnoozed, setAdrenalineSnoozed] = useState(false);
-  const [amiodaroneSnoozed, setAmiodaroneSnoozed] = useState(false);
-  const [lidocaineSnoozed, setLidocaineSnoozed] = useState(false);
-  const snoozeTimerRefs = useRef({ adrenaline: null, amiodarone: null, lidocaine: null });
-  
   // Lidocaine tracking
   const [lidocaineCumulativeDose, setLidocaineCumulativeDose] = useState(0); // in mg/kg
   const [lastLidocaineTime, setLastLidocaineTime] = useState(null);
@@ -109,8 +103,6 @@ export default function CPRTracker() {
   // Audio context and refs
   const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
-  const rhythmSelectorRef = useRef(null);
-  const eventBannerRef = useRef(null);
 
   // Initialize Web Audio API
   useEffect(() => {
@@ -271,7 +263,7 @@ export default function CPRTracker() {
 
     // Determine adrenaline status - use shouldShow directly, not the state variable
     let adrenalineStatus = 'pending';
-    if (shouldShowAdrenaline && !adrenalineDismissed && !adrenalineSnoozed) {
+    if (shouldShowAdrenaline && !adrenalineDismissed) {
       adrenalineStatus = soundEnabled ? 'active' : 'pending';
     } else if (timeSinceLastAdrenaline !== null) {
       const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
@@ -314,8 +306,8 @@ export default function CPRTracker() {
         dose: null, // Always use dialog for dose selection
         status: (() => {
           if (inTrackMode) return 'pending';
-          // Coach mode: check if any amiodarone dose is due (and not snoozed)
-          if ((shouldShowAmiodarone300 && !amiodarone300Dismissed && !amiodaroneSnoozed) || (shouldShowAmiodarone150 && !amiodarone150Dismissed && !amiodaroneSnoozed)) {
+          // Coach mode: check if any amiodarone dose is due
+          if ((shouldShowAmiodarone300 && !amiodarone300Dismissed) || (shouldShowAmiodarone150 && !amiodarone150Dismissed)) {
             return 'active';
           }
           return 'pending';
@@ -329,8 +321,8 @@ export default function CPRTracker() {
         dose: null, // Always use dialog for dose selection
         status: (() => {
           if (inTrackMode) return 'pending';
-          // Coach mode: check if any lidocaine dose is due (and not snoozed)
-          if ((shouldShowLidocaine1mg && !lidocaine1mgDismissed && !lidocaineSnoozed) || (shouldShowLidocaine05mg && !lidocaine05mgDismissed && !lidocaineSnoozed)) {
+          // Coach mode: check if any lidocaine dose is due
+          if ((shouldShowLidocaine1mg && !lidocaine1mgDismissed) || (shouldShowLidocaine05mg && !lidocaine05mgDismissed)) {
             return 'active';
           }
           return 'pending';
@@ -339,7 +331,7 @@ export default function CPRTracker() {
     ];
 
     setBannerEvents(newBannerEvents);
-  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks, adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, lidocaine1mgDismissed, lidocaine05mgDismissed, shockCount, adrenalineSnoozed, amiodaroneSnoozed, lidocaineSnoozed]);
+  }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks, adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, lidocaine1mgDismissed, lidocaine05mgDismissed, shockCount]);
 
   // Timer effect
   useEffect(() => {
@@ -469,15 +461,7 @@ export default function CPRTracker() {
     setLidocaine1mgDismissed(false);
     setLidocaine05mgDismissed(false);
     setShockCountAtRhythmChange(null);
-    setAdrenalineSnoozed(false);
-    setAmiodaroneSnoozed(false);
-    setLidocaineSnoozed(false);
-    // Clear any active snooze timers
-    Object.values(snoozeTimerRefs.current).forEach(timer => {
-      if (timer) clearTimeout(timer);
-    });
-    snoozeTimerRefs.current = { adrenaline: null, amiodarone: null, lidocaine: null };
-    };
+  };
 
 
 
@@ -508,7 +492,7 @@ export default function CPRTracker() {
     const newCount = pulseChecks + 1;
     setPulseChecks(newCount);
     addEvent('pulse', `Pulse check performed (Cycle ${currentCycle})`);
-
+    
     // Only move to next cycle if not synced
     if (!pulseCheckSynced) {
       setCurrentCycle(prev => prev + 1);
@@ -523,16 +507,6 @@ export default function CPRTracker() {
       setRhythmSelectionStage('unselected');
       setPulseCheckSynced(false); // Reset sync flag
     }
-
-    // Autoscroll to rhythm selector after pulse check
-    setTimeout(() => {
-      if (rhythmSelectorRef.current) {
-        rhythmSelectorRef.current.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }
-    }, 300);
   };
 
   const [syncPressCount, setSyncPressCount] = useState(0);
@@ -618,17 +592,12 @@ export default function CPRTracker() {
     setLastAdrenalineTime(eventTime);
     setAdrenalineDue(false);
     setAdrenalineDismissed(false); // Clear dismissed flag when given
-    setAdrenalineSnoozed(false); // Clear snooze when given
-    if (snoozeTimerRefs.current.adrenaline) {
-      clearTimeout(snoozeTimerRefs.current.adrenaline);
-      snoozeTimerRefs.current.adrenaline = null;
-    }
-
+    
     // Clear crossover tracking once adrenaline is given in new shockable rhythm
     if (shockCountAtRhythmChange !== null) {
       setShockCountAtRhythmChange(null);
     }
-
+    
     addEvent('adrenaline', `Adrenaline 1mg administered (Dose #${newCount})`, { dose: 1 });
     
     toast.success('Adrenaline 1mg administered', {
@@ -650,7 +619,7 @@ export default function CPRTracker() {
     const prevDismissed = adrenalineDismissed;
     setAdrenalineDue(false);
     setAdrenalineDismissed(true);
-
+    
     toast.info('Adrenaline alarm dismissed', {
       duration: 4000,
       position: 'bottom-center',
@@ -659,36 +628,6 @@ export default function CPRTracker() {
         onClick: () => {
           setAdrenalineDismissed(prevDismissed);
           setAdrenalineDue(true);
-        }
-      }
-    });
-  };
-
-  const handleSnoozeAdrenaline = () => {
-    playClick();
-    setAdrenalineSnoozed(true);
-
-    // Clear any existing timer
-    if (snoozeTimerRefs.current.adrenaline) {
-      clearTimeout(snoozeTimerRefs.current.adrenaline);
-    }
-
-    // Set timer to re-enable alarm after 90 seconds
-    snoozeTimerRefs.current.adrenaline = setTimeout(() => {
-      setAdrenalineSnoozed(false);
-    }, 90000);
-
-    toast.info('Adrenaline alarm snoozed for 90 seconds', {
-      duration: 4000,
-      position: 'bottom-center',
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          if (snoozeTimerRefs.current.adrenaline) {
-            clearTimeout(snoozeTimerRefs.current.adrenaline);
-            snoozeTimerRefs.current.adrenaline = null;
-          }
-          setAdrenalineSnoozed(false);
         }
       }
     });
@@ -744,17 +683,10 @@ export default function CPRTracker() {
       });
       return;
     }
-
+    
     playClick();
     setAmiodaroneTotal(prev => prev + amiodaroneDose);
-
-    // Clear snooze when given
-    setAmiodaroneSnoozed(false);
-    if (snoozeTimerRefs.current.amiodarone) {
-      clearTimeout(snoozeTimerRefs.current.amiodarone);
-      snoozeTimerRefs.current.amiodarone = null;
-    }
-
+    
     if (amiodaroneDose === 300) {
       setAmiodarone300Due(false);
       setAmiodarone300Dismissed(false);
@@ -782,17 +714,17 @@ export default function CPRTracker() {
 
   const handleDismissAmiodarone = (dose) => {
     playClick();
-
+    
     // Determine which dose to dismiss based on current state
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const shouldDismiss300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300 && !amiodarone300Dismissed;
     const shouldDismiss150 = isShockable && shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450 && !amiodarone150Dismissed;
-
+    
     if (shouldDismiss300) {
       const prevDismissed = amiodarone300Dismissed;
       setAmiodarone300Due(false);
       setAmiodarone300Dismissed(true);
-
+      
       toast.info('Amiodarone 300mg alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
@@ -808,7 +740,7 @@ export default function CPRTracker() {
       const prevDismissed = amiodarone150Dismissed;
       setAmiodarone150Due(false);
       setAmiodarone150Dismissed(true);
-
+      
       toast.info('Amiodarone 150mg alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
@@ -821,36 +753,6 @@ export default function CPRTracker() {
         }
       });
     }
-  };
-
-  const handleSnoozeAmiodarone = () => {
-    playClick();
-    setAmiodaroneSnoozed(true);
-
-    // Clear any existing timer
-    if (snoozeTimerRefs.current.amiodarone) {
-      clearTimeout(snoozeTimerRefs.current.amiodarone);
-    }
-
-    // Set timer to re-enable alarm after 90 seconds
-    snoozeTimerRefs.current.amiodarone = setTimeout(() => {
-      setAmiodaroneSnoozed(false);
-    }, 90000);
-
-    toast.info('Amiodarone alarm snoozed for 90 seconds', {
-      duration: 4000,
-      position: 'bottom-center',
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          if (snoozeTimerRefs.current.amiodarone) {
-            clearTimeout(snoozeTimerRefs.current.amiodarone);
-            snoozeTimerRefs.current.amiodarone = null;
-          }
-          setAmiodaroneSnoozed(false);
-        }
-      }
-    });
   };
 
   const [showLidocaineDialog, setShowLidocaineDialog] = useState(false);
@@ -908,19 +810,12 @@ export default function CPRTracker() {
       });
       return;
     }
-
+    
     const totalDose = lidocaineDosePerKg * patientWeight;
     playClick();
     setLidocaineCumulativeDose(prev => prev + lidocaineDosePerKg);
     setLastLidocaineTime(totalSeconds);
-
-    // Clear snooze when given
-    setLidocaineSnoozed(false);
-    if (snoozeTimerRefs.current.lidocaine) {
-      clearTimeout(snoozeTimerRefs.current.lidocaine);
-      snoozeTimerRefs.current.lidocaine = null;
-    }
-
+    
     // Clear the appropriate due/dismissed flags based on dose number
     if (lidocaineDoseNumber === 1) {
       setLidocaine1mgDue(false);
@@ -949,7 +844,7 @@ export default function CPRTracker() {
 
   const handleDismissLidocaine = (dose) => {
     playClick();
-
+    
     // Determine which dose to dismiss based on current state
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const lidocaineGivenCount = events.filter(e => e.type === 'lidocaine').length;
@@ -961,12 +856,12 @@ export default function CPRTracker() {
       (shockCount >= 20 && lidocaineGivenCount === 4) ||
       (shockCount >= 23 && lidocaineGivenCount >= 5)
     );
-
+    
     if (shouldDismiss1mg) {
       const prevDismissed = lidocaine1mgDismissed;
       setLidocaine1mgDue(false);
       setLidocaine1mgDismissed(true);
-
+      
       toast.info('Xylocaine 1st dose alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
@@ -982,7 +877,7 @@ export default function CPRTracker() {
       const prevDismissed = lidocaine05mgDismissed;
       setLidocaine05mgDue(false);
       setLidocaine05mgDismissed(true);
-
+      
       toast.info('Xylocaine subsequent dose alarm dismissed', {
         duration: 4000,
         position: 'bottom-center',
@@ -995,36 +890,6 @@ export default function CPRTracker() {
         }
       });
     }
-  };
-
-  const handleSnoozeLidocaine = () => {
-    playClick();
-    setLidocaineSnoozed(true);
-
-    // Clear any existing timer
-    if (snoozeTimerRefs.current.lidocaine) {
-      clearTimeout(snoozeTimerRefs.current.lidocaine);
-    }
-
-    // Set timer to re-enable alarm after 90 seconds
-    snoozeTimerRefs.current.lidocaine = setTimeout(() => {
-      setLidocaineSnoozed(false);
-    }, 90000);
-
-    toast.info('Xylocaine alarm snoozed for 90 seconds', {
-      duration: 4000,
-      position: 'bottom-center',
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          if (snoozeTimerRefs.current.lidocaine) {
-            clearTimeout(snoozeTimerRefs.current.lidocaine);
-            snoozeTimerRefs.current.lidocaine = null;
-          }
-          setLidocaineSnoozed(false);
-        }
-      }
-    });
   };
 
   const handleAddDiscretionaryMed = ({ medication, dosage }) => {
@@ -1138,12 +1003,12 @@ export default function CPRTracker() {
 
   const handleRhythmChange = (rhythm) => {
     if (rhythmSelectionStage === 'selected') return; // Cannot change if already selected
-
+    
     const prevRhythm = currentRhythm;
     const prevStage = rhythmSelectionStage;
     const prevInitialRhythm = initialRhythm;
     const prevShockCountAtChange = shockCountAtRhythmChange;
-
+    
     setCurrentRhythm(rhythm);
     setRhythmSelectionStage('selected'); // Lock rhythm selection
     
@@ -1799,47 +1664,36 @@ export default function CPRTracker() {
         />
 
         {/* Rhythm Selector */}
-        <div ref={rhythmSelectorRef}>
-          <RhythmSelector 
-            currentRhythm={currentRhythm} 
-            rhythmSelectionStage={rhythmSelectionStage}
-            onRhythmChange={handleRhythmChange}
-            onShockDelivered={handleShockDelivered}
-            shockCount={shockCount}
-            shockDeliveredThisCycle={shockDeliveredThisCycle}
-            isRunning={isRunning}
-            disabled={!hasStarted}
-            soundEnabled={soundEnabled}
-          />
-        </div>
+        <RhythmSelector 
+          currentRhythm={currentRhythm} 
+          rhythmSelectionStage={rhythmSelectionStage}
+          onRhythmChange={handleRhythmChange}
+          onShockDelivered={handleShockDelivered}
+          shockCount={shockCount}
+          shockDeliveredThisCycle={shockDeliveredThisCycle}
+          isRunning={isRunning}
+          disabled={!hasStarted}
+          soundEnabled={soundEnabled}
+        />
 
         {/* Event Banners */}
-        <div ref={eventBannerRef}>
-          <EventBanner 
-            events={bannerEvents}
-            onConfirmCompressorChange={handleConfirmCompressorChange}
-            onConfirmPulseCheck={handleConfirmPulseCheck}
-            onConfirmAdrenaline={handleConfirmAdrenaline}
-            onDismissAdrenaline={handleDismissAdrenaline}
-            onSnoozeAdrenaline={handleSnoozeAdrenaline}
-            onConfirmAmiodarone={handleConfirmAmiodarone}
-            onDismissAmiodarone={handleDismissAmiodarone}
-            onSnoozeAmiodarone={handleSnoozeAmiodarone}
-            onConfirmLidocaine={handleConfirmLidocaine}
-            onDismissLidocaine={handleDismissLidocaine}
-            onSnoozeLidocaine={handleSnoozeLidocaine}
-            onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
-            onSyncPulseCheck={handleSyncPulseCheck}
-            pulseCheckSynced={pulseCheckSynced}
-            lucasActive={lucasActive}
-            onToggleLucas={handleToggleLucas}
-            disabled={!hasStarted}
-            soundEnabled={soundEnabled}
-            adrenalineSnoozed={adrenalineSnoozed}
-            amiodaroneSnoozed={amiodaroneSnoozed}
-            lidocaineSnoozed={lidocaineSnoozed}
-          />
-        </div>
+        <EventBanner 
+          events={bannerEvents}
+          onConfirmCompressorChange={handleConfirmCompressorChange}
+          onConfirmPulseCheck={handleConfirmPulseCheck}
+          onConfirmAdrenaline={handleConfirmAdrenaline}
+          onDismissAdrenaline={handleDismissAdrenaline}
+          onConfirmAmiodarone={handleConfirmAmiodarone}
+          onDismissAmiodarone={handleDismissAmiodarone}
+          onConfirmLidocaine={handleConfirmLidocaine}
+          onDismissLidocaine={handleDismissLidocaine}
+          onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
+          onSyncPulseCheck={handleSyncPulseCheck}
+          pulseCheckSynced={pulseCheckSynced}
+          lucasActive={lucasActive}
+          onToggleLucas={handleToggleLucas}
+          disabled={!hasStarted}
+        />
 
         {/* Common Medications */}
         <CommonMedications 
