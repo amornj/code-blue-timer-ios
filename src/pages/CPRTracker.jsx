@@ -606,12 +606,17 @@ export default function CPRTracker() {
     setLastAdrenalineTime(eventTime);
     setAdrenalineDue(false);
     setAdrenalineDismissed(false); // Clear dismissed flag when given
-    
+    setAdrenalineSnoozed(false); // Clear snooze when given
+    if (snoozeTimerRefs.current.adrenaline) {
+      clearTimeout(snoozeTimerRefs.current.adrenaline);
+      snoozeTimerRefs.current.adrenaline = null;
+    }
+
     // Clear crossover tracking once adrenaline is given in new shockable rhythm
     if (shockCountAtRhythmChange !== null) {
       setShockCountAtRhythmChange(null);
     }
-    
+
     addEvent('adrenaline', `Adrenaline 1mg administered (Dose #${newCount})`, { dose: 1 });
     
     toast.success('Adrenaline 1mg administered', {
@@ -727,10 +732,17 @@ export default function CPRTracker() {
       });
       return;
     }
-    
+
     playClick();
     setAmiodaroneTotal(prev => prev + amiodaroneDose);
-    
+
+    // Clear snooze when given
+    setAmiodaroneSnoozed(false);
+    if (snoozeTimerRefs.current.amiodarone) {
+      clearTimeout(snoozeTimerRefs.current.amiodarone);
+      snoozeTimerRefs.current.amiodarone = null;
+    }
+
     if (amiodaroneDose === 300) {
       setAmiodarone300Due(false);
       setAmiodarone300Dismissed(false);
@@ -884,12 +896,19 @@ export default function CPRTracker() {
       });
       return;
     }
-    
+
     const totalDose = lidocaineDosePerKg * patientWeight;
     playClick();
     setLidocaineCumulativeDose(prev => prev + lidocaineDosePerKg);
     setLastLidocaineTime(totalSeconds);
-    
+
+    // Clear snooze when given
+    setLidocaineSnoozed(false);
+    if (snoozeTimerRefs.current.lidocaine) {
+      clearTimeout(snoozeTimerRefs.current.lidocaine);
+      snoozeTimerRefs.current.lidocaine = null;
+    }
+
     // Clear the appropriate due/dismissed flags based on dose number
     if (lidocaineDoseNumber === 1) {
       setLidocaine1mgDue(false);
