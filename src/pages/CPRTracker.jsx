@@ -1146,16 +1146,6 @@ export default function CPRTracker() {
 
     setCurrentRhythm(rhythm);
     setRhythmSelectionStage('selected'); // Lock rhythm selection
-
-    // After rhythm is selected, scroll back to event banners if there are active alerts
-    setTimeout(() => {
-      if (eventBannerRef.current) {
-        eventBannerRef.current.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }
-    }, 500);
     
     // Track initial rhythm
     if (!initialRhythm) {
