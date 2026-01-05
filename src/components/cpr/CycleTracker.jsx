@@ -5,19 +5,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted, onSyncCycle }) {
+export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted, onSyncCycle, adrenalineFrequency = 4, lastAdrenalineTime = null }) {
   const [showModeDialog, setShowModeDialog] = useState(false);
   const [pendingMode, setPendingMode] = useState(null);
   const [syncPressed, setSyncPressed] = useState(false);
   
   const progress = (cycleSeconds / 120) * 100;
   const remainingSeconds = 120 - cycleSeconds;
-  
+
   const formatTime = (secs) => {
     const mins = Math.floor(secs / 60);
     const s = secs % 60;
     return `${mins}:${s.toString().padStart(2, '0')}`;
   };
+
+  // Calculate adrenaline progress
+  const adrenalineIntervalSeconds = adrenalineFrequency * 60;
+  const timeElapsed = adrenalineCount === 0 
+    ? totalSeconds 
+    : (lastAdrenalineTime !== null ? totalSeconds - lastAdrenalineTime : 0);
+  const adrenalineProgress = Math.min((timeElapsed / adrenalineIntervalSeconds) * 100, 100);
+  const isAdrenalineOverdue = timeElapsed > adrenalineIntervalSeconds;
 
   const handleModeToggle = () => {
     const prevMode = soundEnabled;
@@ -140,6 +148,14 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
           <Syringe className="w-4 h-4 mx-auto mb-1 text-red-400" />
           <div className="text-xl font-bold text-white">{adrenalineCount}</div>
           <div className="text-xs text-slate-400">Adrenaline</div>
+          <div className="mt-1 h-1 bg-slate-600 rounded-full overflow-hidden">
+            <div 
+              className={`h-full transition-all duration-1000 ${
+                isAdrenalineOverdue ? 'bg-red-500' : 'bg-red-400'
+              }`}
+              style={{ width: `${adrenalineProgress}%` }}
+            />
+          </div>
         </div>
         <div className="bg-slate-700/50 rounded-lg p-2 text-center">
           <IVBagIcon className="w-4 h-4 mx-auto mb-1 text-purple-400" />

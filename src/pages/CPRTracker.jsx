@@ -1417,6 +1417,8 @@ export default function CPRTracker() {
           onSoundToggle={setSoundEnabled}
           hasStarted={hasStarted}
           onSyncCycle={handleSyncCycle}
+          adrenalineFrequency={adrenalineFrequency}
+          lastAdrenalineTime={lastAdrenalineTime}
         />
 
         {/* Rhythm Selector */}
