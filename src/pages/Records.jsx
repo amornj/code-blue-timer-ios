@@ -203,6 +203,285 @@ export default function Records() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const exportSingleRecordHTML = (record) => {
+    const formatTime = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatOutcome = (outcome) => {
+      switch (outcome) {
+        case 'ROSC_following': return 'ROSC, and following command';
+        case 'ROSC_not_following': return 'ROSC, not following command';
+        case 'death': return 'Death';
+        case 'VA_ECMO': return 'Transit to VA ECMO';
+        case 'transfer_ICU': return 'Transfer to ICU or other hospital';
+        case 'ROSC': return 'ROSC';
+        case 'deceased': return 'Deceased';
+        case 'ongoing': return 'Ongoing';
+        case 'transferred': return 'Transferred';
+        default: return outcome || 'N/A';
+      }
+    };
+
+    // Build comprehensive event log
+    const allEvents = [];
+    
+    (record.rhythm_history || []).forEach(r => {
+      allEvents.push({
+        time: r.timestamp,
+        description: `Rhythm Check: ${r.rhythm}`,
+        cycle: r.cycle
+      });
+    });
+    
+    (record.shocks_delivered || []).forEach(s => {
+      allEvents.push({
+        time: s.timestamp,
+        description: `Shock Delivered @ ${s.energy_joules}J (Rhythm: ${s.rhythm_before})`,
+        cycle: s.cycle
+      });
+    });
+    
+    (record.compressor_changes || []).forEach(c => {
+      allEvents.push({
+        time: c.timestamp,
+        description: 'Compressor Changed',
+        cycle: c.cycle
+      });
+    });
+    
+    (record.pulse_checks || []).forEach(p => {
+      allEvents.push({
+        time: p.timestamp,
+        description: 'Pulse Check Performed',
+        cycle: p.cycle
+      });
+    });
+    
+    (record.adrenaline_doses || []).forEach(a => {
+      allEvents.push({
+        time: a.timestamp,
+        description: `Adrenaline ${a.dose_mg}mg IV`,
+        cycle: a.cycle
+      });
+    });
+    
+    (record.amiodarone_doses || []).forEach(a => {
+      allEvents.push({
+        time: a.timestamp,
+        description: `Amiodarone ${a.dose_mg}mg IV`,
+        cycle: a.cycle
+      });
+    });
+    
+    (record.lidocaine_doses || []).forEach(l => {
+      allEvents.push({
+        time: l.timestamp,
+        description: `Xylocaine ${l.dose_mg_per_kg} mg/kg IV`,
+        cycle: l.cycle
+      });
+    });
+    
+    (record.discretionary_medications || []).forEach(m => {
+      allEvents.push({
+        time: m.timestamp,
+        description: m.medication || m.dosage,
+        cycle: m.cycle
+      });
+    });
+    
+    if (record.end_time) {
+      allEvents.push({
+        time: format(new Date(record.end_time), 'HH:mm'),
+        description: `CPR Session Ended (Outcome: ${formatOutcome(record.outcome)})`,
+        cycle: '-'
+      });
+    }
+    
+    allEvents.sort((a, b) => {
+      const timeA = a.time.split(':').map(Number);
+      const timeB = b.time.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    });
+
+    const filteredEvents = allEvents;
+
+    const formatEventForHTML = (e) => {
+      return `<tr><td>${e.time}</td><td>${e.description}</td><td>Cycle ${e.cycle || '-'}</td></tr>`;
+    };
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>CPR Session Report</title>
+        <style>
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+          body {
+            font-family: 'Sarabun', 'Tahoma', Arial, sans-serif;
+            margin: 20px;
+            color: #1e293b;
+          }
+          h1 {
+            color: #1e40af;
+            font-size: 24px;
+            margin-bottom: 20px;
+          }
+          .summary-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+          }
+          .summary-box p {
+            margin: 5px 0;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          th {
+            background: #1e40af;
+            color: white;
+            padding: 10px;
+            text-align: left;
+          }
+          td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+          }
+          tr:nth-child(even) {
+            background: #f8fafc;
+          }
+          .notes {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+          }
+          .notes h3 {
+            margin-top: 0;
+            color: #1e40af;
+          }
+          .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 10px;
+          }
+          .print-button {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 20px;
+          }
+          .print-button:hover {
+            background: #1e3a8a;
+          }
+        </style>
+      </head>
+      <body>
+        <button onclick="window.print()" class="print-button no-print">🖨️ Print / Save as PDF</button>
+        
+        <h1>CPR Session Report</h1>
+        
+        <div class="summary-box">
+          ${record.patient_name ? `<p><strong>Patient:</strong> ${record.patient_name}</p>` : ''}
+          ${record.hospital_number ? `<p><strong>HN:</strong> ${record.hospital_number}</p>` : ''}
+          ${record.hospital_name ? `<p><strong>Hospital:</strong> ${record.hospital_name}</p>` : ''}
+          <p><strong>Start:</strong> ${format(new Date(record.start_time), 'MMM d, yyyy HH:mm')}</p>
+          <p><strong>Duration:</strong> ${formatTime(record.total_duration_seconds || 0)}</p>
+          <p><strong>Cycles:</strong> ${record.total_cycles || 0}</p>
+          <p><strong>Outcome:</strong> ${formatOutcome(record.outcome)}</p>
+        </div>
+        
+        <div class="summary-box">
+          <h3>Summary</h3>
+          <p>
+            <strong>Shocks:</strong> ${record.shocks_delivered?.length || 0} | 
+            <strong>Adrenaline:</strong> ${record.adrenaline_doses?.length || 0} | 
+            <strong>Amiodarone:</strong> ${record.amiodarone_doses?.reduce((sum, d) => sum + (d.dose_mg || 0), 0) || 0}mg | 
+            <strong>Lidocaine:</strong> ${record.lidocaine_doses?.reduce((sum, d) => sum + (d.dose_mg_per_kg || 0), 0) || 0} mg/kg | 
+            <strong>Compressor Changes:</strong> ${record.compressor_changes?.length || 0}
+          </p>
+        </div>
+        
+        ${filteredEvents.length > 0 ? `
+          <h3>Event Log</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Cycle</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredEvents.map(formatEventForHTML).join('')}
+            </tbody>
+          </table>
+        ` : ''}
+        
+        ${record.doctor_notes ? `
+          <div class="notes">
+            <h3>Note1 (During CPR)</h3>
+            <p>${record.doctor_notes.replace(/\n/g, '<br>')}</p>
+          </div>
+        ` : ''}
+        
+        ${record.notes ? `
+          <div class="notes">
+            <h3>Note2 (End Session)</h3>
+            <p>${record.notes.replace(/\n/g, '<br>')}</p>
+          </div>
+        ` : ''}
+        
+        ${record.post_cpr_notes ? `
+          <div class="notes">
+            <h3>Note3 (Post CPR)</h3>
+            <p>${record.post_cpr_notes.replace(/\n/g, '<br>')}</p>
+          </div>
+        ` : ''}
+        
+        <div class="footer">
+          Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const newWindow = window.open(url, '_blank');
+    
+    if (newWindow) {
+      newWindow.onload = () => {
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      };
+    } else {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CPR_Record_${record.patient_name || 'Session'}_${format(new Date(record.start_time), 'yyyy-MM-dd')}.html`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
+    setReportDialog(null);
+  };
+
   const exportSingleRecordPDF = (record) => {
     const formatOutcome = (outcome) => {
       switch (outcome) {
@@ -839,20 +1118,28 @@ export default function Records() {
                 </div>
               </div>
               
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col gap-3 pt-4">
                 <Button
-                  variant="outline"
-                  onClick={() => setReportDialog(null)}
-                  className="flex-1"
+                  onClick={() => exportSingleRecordHTML(reportDialog)}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
                 >
-                  Cancel
+                  <FileText className="w-4 h-4 mr-2" />
+                  HTML Report
                 </Button>
                 <Button
                   onClick={() => exportSingleRecordPDF(reportDialog)}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  variant="outline"
+                  className="w-full border-slate-300"
                 >
                   <FileText className="w-4 h-4 mr-2" />
-                  Export PDF
+                  PDF Download
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setReportDialog(null)}
+                  className="w-full"
+                >
+                  Cancel
                 </Button>
               </div>
             </div>
