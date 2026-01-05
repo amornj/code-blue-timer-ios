@@ -1822,6 +1822,9 @@ export default function CPRTracker() {
           lucasActive={lucasActive}
           onToggleLucas={handleToggleLucas}
           soundEnabled={soundEnabled}
+          adrenalineSnoozed={adrenalineSnoozedUntil !== null && totalSeconds < adrenalineSnoozedUntil}
+          amiodaroneSnoozed={(amiodarone300SnoozedUntil !== null && totalSeconds < amiodarone300SnoozedUntil) || (amiodarone150SnoozedUntil !== null && totalSeconds < amiodarone150SnoozedUntil)}
+          lidocaineSnoozed={(lidocaine1mgSnoozedUntil !== null && totalSeconds < lidocaine1mgSnoozedUntil) || (lidocaine05mgSnoozedUntil !== null && totalSeconds < lidocaine05mgSnoozedUntil)}
           disabled={!hasStarted}
         />
 

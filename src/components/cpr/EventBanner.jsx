@@ -23,6 +23,9 @@ export default function EventBanner({
   lucasActive,
   onToggleLucas,
   soundEnabled = false,
+  adrenalineSnoozed = false,
+  amiodaroneSnoozed = false,
+  lidocaineSnoozed = false,
   disabled = false
 }) {
   const adrenalineRef = useRef(null);
@@ -155,19 +158,28 @@ export default function EventBanner({
             
               {(event.status === 'active' || (event.status === 'pending' && isMedicationButton(event.type))) && (
                 <div className="mt-2 w-full space-y-1">
-                  <Button 
-                    size="sm" 
-                    className={`w-full ${event.status === 'active' ? getButtonColors(event.type) : 'bg-slate-600 hover:bg-slate-500'} text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed`}
-                    onClick={() => handleConfirm(event)}
-                    disabled={disabled}
-                  >
-                    <Check className="w-4 h-4 mr-1" /> {event.status === 'active' ? 'Confirm' : 'Give'}
-                  </Button>
+                  <div className="relative">
+                    <Button 
+                      size="sm" 
+                      className={`w-full ${event.status === 'active' ? getButtonColors(event.type) : 'bg-slate-600 hover:bg-slate-500'} text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed`}
+                      onClick={() => handleConfirm(event)}
+                      disabled={disabled}
+                    >
+                      <Check className="w-4 h-4 mr-1" /> {event.status === 'active' ? 'Confirm' : 'Give'}
+                    </Button>
+                    {/* Show snoozed indicator under Give button */}
+                    {((event.type === 'adrenaline' && adrenalineSnoozed) ||
+                      (event.type === 'amiodarone' && amiodaroneSnoozed) ||
+                      (event.type === 'lidocaine' && lidocaineSnoozed)) && (
+                      <div className="text-center text-yellow-400 text-xs font-semibold mt-1">
+                        Snoozed
+                      </div>
+                    )}
+                  </div>
                   {event.status === 'active' && isMedicationButton(event.type) && soundEnabled && (
                     <Button 
                       size="sm" 
-                      variant="outline"
-                      className="w-full border-amber-600 text-amber-400 hover:bg-amber-900/30 hover:text-amber-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleSnooze(event)}
                       disabled={disabled}
                     >
