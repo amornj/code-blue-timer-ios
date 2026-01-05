@@ -1062,33 +1062,59 @@ export default function CPRTracker() {
     const prevShocksInRhythm = shocksInCurrentShockableRhythm;
     const prevCyclesWithShocks = new Set(cyclesWithShocks);
     const prevShockDelivered = shockDeliveredThisCycle;
-    
+
     setShockCount(prev => prev + 1);
     setShocksInCurrentShockableRhythm(prev => prev + 1);
-    
+
     // Track that this cycle had a shock (for medication timing)
     setCyclesWithShocks(prev => new Set([...prev, currentCycle]));
-    setShockDeliveredThisCycle(true);
-    
+
+    // In coach mode, lock shock button after first shock
+    // In track mode, allow multiple shocks per cycle
+    if (soundEnabled) {
+      setShockDeliveredThisCycle(true);
+    }
+
     addEvent('shock', `Shock delivered @ ${energy}J (Shock #${shockCount + 1})`, { 
       energy, 
       rhythmBefore: currentRhythm 
     });
-    
-    toast.success(`Shock delivered @ ${energy}J`, {
-      duration: 4000,
-      position: 'bottom-center',
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          setShockCount(prevShockCount);
-          setShocksInCurrentShockableRhythm(prevShocksInRhythm);
-          setCyclesWithShocks(prevCyclesWithShocks);
-          setShockDeliveredThisCycle(prevShockDelivered);
-          setEvents(prev => prev.slice(0, -1));
+
+    // Count shocks in this cycle for warning message
+    const shocksThisCycle = events.filter(e => e.type === 'shock' && e.cycle === currentCycle).length + 1;
+
+    // Show warning if delivering more than 1 shock per cycle in track mode
+    if (!soundEnabled && shocksThisCycle > 1) {
+      toast.warning(`⚠️ Multiple shocks in cycle ${currentCycle} (${shocksThisCycle} shocks)`, {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setShockCount(prevShockCount);
+            setShocksInCurrentShockableRhythm(prevShocksInRhythm);
+            setCyclesWithShocks(prevCyclesWithShocks);
+            setShockDeliveredThisCycle(prevShockDelivered);
+            setEvents(prev => prev.slice(0, -1));
+          }
         }
-      }
-    });
+      });
+    } else {
+      toast.success(`Shock delivered @ ${energy}J`, {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setShockCount(prevShockCount);
+            setShocksInCurrentShockableRhythm(prevShocksInRhythm);
+            setCyclesWithShocks(prevCyclesWithShocks);
+            setShockDeliveredThisCycle(prevShockDelivered);
+            setEvents(prev => prev.slice(0, -1));
+          }
+        }
+      });
+    }
   };
 
   const handleEndSession = async () => {
@@ -1403,6 +1429,7 @@ export default function CPRTracker() {
           shockDeliveredThisCycle={shockDeliveredThisCycle}
           isRunning={isRunning}
           disabled={!hasStarted}
+          soundEnabled={soundEnabled}
         />
 
         {/* Event Banners */}

@@ -16,7 +16,7 @@ const NON_SHOCKABLE_RHYTHMS = [
 
 const ENERGY_OPTIONS = [120, 150, 200, 250, 300, 360];
 
-export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle, isRunning, disabled = false }) {
+export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, onRhythmChange, onShockDelivered, shockCount, shockDeliveredThisCycle, isRunning, disabled = false, soundEnabled = false }) {
   const isShockable = SHOCKABLE_RHYTHMS.some(r => r.id === currentRhythm);
   const [showShockDialog, setShowShockDialog] = useState(false);
   const [selectedEnergy, setSelectedEnergy] = useState(200);
@@ -99,19 +99,19 @@ export default function RhythmSelector({ currentRhythm, rhythmSelectionStage, on
         {/* Shock Button - Only shown when shockable rhythm selected */}
         {isShockable && (
           <Button
-            onClick={() => setShowShockDialog(true)}
-            disabled={disabled || shockDeliveredThisCycle}
-            className={`w-full h-16 text-lg font-bold rounded-xl ${
-              (disabled || shockDeliveredThisCycle)
-                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-lg animate-pulse'
-            }`}
-          >
-            <Zap className="w-6 h-6 mr-2" />
-            {shockDeliveredThisCycle 
-              ? 'SHOCK DELIVERED' 
-              : `DELIVER SHOCK (${shockCount} delivered)`}
-          </Button>
+              onClick={() => setShowShockDialog(true)}
+              disabled={disabled || (soundEnabled && shockDeliveredThisCycle)}
+              className={`w-full h-16 text-lg font-bold rounded-xl ${
+                (disabled || (soundEnabled && shockDeliveredThisCycle))
+                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-lg animate-pulse'
+              }`}
+            >
+              <Zap className="w-6 h-6 mr-2" />
+              {(soundEnabled && shockDeliveredThisCycle)
+                ? 'SHOCK DELIVERED' 
+                : `DELIVER SHOCK (${shockCount} delivered)`}
+            </Button>
         )}
 
         {/* Non-Shockable Rhythm Alert */}
