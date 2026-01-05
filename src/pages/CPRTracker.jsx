@@ -109,6 +109,8 @@ export default function CPRTracker() {
   // Audio context and refs
   const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
+  const rhythmSelectorRef = useRef(null);
+  const eventBannerRef = useRef(null);
 
   // Initialize Web Audio API
   useEffect(() => {
@@ -506,7 +508,7 @@ export default function CPRTracker() {
     const newCount = pulseChecks + 1;
     setPulseChecks(newCount);
     addEvent('pulse', `Pulse check performed (Cycle ${currentCycle})`);
-    
+
     // Only move to next cycle if not synced
     if (!pulseCheckSynced) {
       setCurrentCycle(prev => prev + 1);
@@ -521,6 +523,16 @@ export default function CPRTracker() {
       setRhythmSelectionStage('unselected');
       setPulseCheckSynced(false); // Reset sync flag
     }
+
+    // Autoscroll to rhythm selector after pulse check
+    setTimeout(() => {
+      if (rhythmSelectorRef.current) {
+        rhythmSelectorRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    }, 300);
   };
 
   const [syncPressCount, setSyncPressCount] = useState(0);
@@ -1126,14 +1138,24 @@ export default function CPRTracker() {
 
   const handleRhythmChange = (rhythm) => {
     if (rhythmSelectionStage === 'selected') return; // Cannot change if already selected
-    
+
     const prevRhythm = currentRhythm;
     const prevStage = rhythmSelectionStage;
     const prevInitialRhythm = initialRhythm;
     const prevShockCountAtChange = shockCountAtRhythmChange;
-    
+
     setCurrentRhythm(rhythm);
     setRhythmSelectionStage('selected'); // Lock rhythm selection
+
+    // After rhythm is selected, scroll back to event banners if there are active alerts
+    setTimeout(() => {
+      if (eventBannerRef.current) {
+        eventBannerRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    }, 500);
     
     // Track initial rhythm
     if (!initialRhythm) {
@@ -1787,43 +1809,47 @@ export default function CPRTracker() {
         />
 
         {/* Rhythm Selector */}
-        <RhythmSelector 
-          currentRhythm={currentRhythm} 
-          rhythmSelectionStage={rhythmSelectionStage}
-          onRhythmChange={handleRhythmChange}
-          onShockDelivered={handleShockDelivered}
-          shockCount={shockCount}
-          shockDeliveredThisCycle={shockDeliveredThisCycle}
-          isRunning={isRunning}
-          disabled={!hasStarted}
-          soundEnabled={soundEnabled}
-        />
+        <div ref={rhythmSelectorRef}>
+          <RhythmSelector 
+            currentRhythm={currentRhythm} 
+            rhythmSelectionStage={rhythmSelectionStage}
+            onRhythmChange={handleRhythmChange}
+            onShockDelivered={handleShockDelivered}
+            shockCount={shockCount}
+            shockDeliveredThisCycle={shockDeliveredThisCycle}
+            isRunning={isRunning}
+            disabled={!hasStarted}
+            soundEnabled={soundEnabled}
+          />
+        </div>
 
         {/* Event Banners */}
-        <EventBanner 
-          events={bannerEvents}
-          onConfirmCompressorChange={handleConfirmCompressorChange}
-          onConfirmPulseCheck={handleConfirmPulseCheck}
-          onConfirmAdrenaline={handleConfirmAdrenaline}
-          onDismissAdrenaline={handleDismissAdrenaline}
-          onSnoozeAdrenaline={handleSnoozeAdrenaline}
-          onConfirmAmiodarone={handleConfirmAmiodarone}
-          onDismissAmiodarone={handleDismissAmiodarone}
-          onSnoozeAmiodarone={handleSnoozeAmiodarone}
-          onConfirmLidocaine={handleConfirmLidocaine}
-          onDismissLidocaine={handleDismissLidocaine}
-          onSnoozeLidocaine={handleSnoozeLidocaine}
-          onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
-          onSyncPulseCheck={handleSyncPulseCheck}
-          pulseCheckSynced={pulseCheckSynced}
-          lucasActive={lucasActive}
-          onToggleLucas={handleToggleLucas}
-          disabled={!hasStarted}
-          soundEnabled={soundEnabled}
-          adrenalineSnoozed={adrenalineSnoozed}
-          amiodaroneSnoozed={amiodaroneSnoozed}
-          lidocaineSnoozed={lidocaineSnoozed}
-        />
+        <div ref={eventBannerRef}>
+          <EventBanner 
+            events={bannerEvents}
+            onConfirmCompressorChange={handleConfirmCompressorChange}
+            onConfirmPulseCheck={handleConfirmPulseCheck}
+            onConfirmAdrenaline={handleConfirmAdrenaline}
+            onDismissAdrenaline={handleDismissAdrenaline}
+            onSnoozeAdrenaline={handleSnoozeAdrenaline}
+            onConfirmAmiodarone={handleConfirmAmiodarone}
+            onDismissAmiodarone={handleDismissAmiodarone}
+            onSnoozeAmiodarone={handleSnoozeAmiodarone}
+            onConfirmLidocaine={handleConfirmLidocaine}
+            onDismissLidocaine={handleDismissLidocaine}
+            onSnoozeLidocaine={handleSnoozeLidocaine}
+            onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
+            onSyncPulseCheck={handleSyncPulseCheck}
+            pulseCheckSynced={pulseCheckSynced}
+            lucasActive={lucasActive}
+            onToggleLucas={handleToggleLucas}
+            disabled={!hasStarted}
+            soundEnabled={soundEnabled}
+            adrenalineSnoozed={adrenalineSnoozed}
+            amiodaroneSnoozed={amiodaroneSnoozed}
+            lidocaineSnoozed={lidocaineSnoozed}
+          />
+        </div>
 
         {/* Common Medications */}
         <CommonMedications 
