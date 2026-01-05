@@ -151,7 +151,7 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
           <div className="mt-1 h-1 bg-slate-600 rounded-full overflow-hidden">
             <div 
               className={`h-full transition-all duration-1000 ${
-                isAdrenalineOverdue ? 'bg-red-500' : 'bg-red-400'
+                isAdrenalineOverdue ? 'bg-red-500 animate-pulse' : 'bg-red-400'
               }`}
               style={{ width: `${adrenalineProgress}%` }}
             />
