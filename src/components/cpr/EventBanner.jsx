@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Heart, Activity, Syringe, Check, AlertTriangle } from 'lucide-react';
+import { Heart, Activity, Syringe, Check, AlertTriangle, Clock } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 
@@ -10,15 +10,19 @@ export default function EventBanner({
   onConfirmPulseCheck,
   onConfirmAdrenaline,
   onDismissAdrenaline,
+  onSnoozeAdrenaline,
   onConfirmAmiodarone,
   onDismissAmiodarone,
+  onSnoozeAmiodarone,
   onConfirmLidocaine,
   onDismissLidocaine,
+  onSnoozeLidocaine,
   onAdrenalineFrequencyChange,
   onSyncPulseCheck,
   pulseCheckSynced,
   lucasActive,
   onToggleLucas,
+  soundEnabled = false,
   disabled = false
 }) {
   const adrenalineRef = useRef(null);
@@ -91,6 +95,14 @@ export default function EventBanner({
     }
   };
 
+  const handleSnooze = (event) => {
+    switch (event.type) {
+      case 'adrenaline': onSnoozeAdrenaline(); break;
+      case 'amiodarone': onSnoozeAmiodarone(); break;
+      case 'lidocaine': onSnoozeLidocaine(); break;
+    }
+  };
+
   const isMedicationButton = (type) => {
     return ['adrenaline', 'amiodarone', 'lidocaine'].includes(type);
   };
@@ -151,6 +163,17 @@ export default function EventBanner({
                   >
                     <Check className="w-4 h-4 mr-1" /> {event.status === 'active' ? 'Confirm' : 'Give'}
                   </Button>
+                  {event.status === 'active' && isMedicationButton(event.type) && soundEnabled && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="w-full border-amber-600 text-amber-400 hover:bg-amber-900/30 hover:text-amber-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleSnooze(event)}
+                      disabled={disabled}
+                    >
+                      <Clock className="w-4 h-4 mr-1" /> Snooze 90s
+                    </Button>
+                  )}
                   {event.status === 'active' && isMedicationButton(event.type) && (
                     <Button 
                       size="sm" 
