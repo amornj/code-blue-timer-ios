@@ -98,6 +98,7 @@ export default function CPRTracker() {
   const [showConfirmEnd, setShowConfirmEnd] = useState(false);
   const [outcome, setOutcome] = useState('');
   const [notes, setNotes] = useState('');
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   // Audio context and refs
   const audioContextRef = useRef(null);
@@ -1281,7 +1282,7 @@ export default function CPRTracker() {
         default:
           description = e.message;
       }
-      
+
       return [e.timestamp, description, `Cycle ${e.cycle || '-'}`];
     };
 
@@ -1346,6 +1347,247 @@ export default function CPRTracker() {
     doc.save(fileName);
   };
 
+  const exportHTML = () => {
+    const formatTime = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatOutcome = (outcome) => {
+      switch (outcome) {
+        case 'ROSC_following': return 'ROSC, and following command';
+        case 'ROSC_not_following': return 'ROSC, not following command';
+        case 'death': return 'Death';
+        case 'VA_ECMO': return 'Transit to VA ECMO';
+        case 'transfer_ICU': return 'Transfer to ICU or other hospital';
+        case 'ROSC': return 'ROSC';
+        case 'deceased': return 'Deceased';
+        case 'ongoing': return 'Ongoing';
+        case 'transferred': return 'Transferred';
+        default: return outcome || 'N/A';
+      }
+    };
+
+    const outcomeText = sessionEnded && finalOutcome 
+      ? formatOutcome(finalOutcome)
+      : 'Ongoing - CPR in progress';
+
+    const filteredEvents = events.filter(e => e.type !== 'start' && !e.message?.includes('Time adjusted'));
+
+    const formatEventForHTML = (e) => {
+      let description = '';
+      switch (e.type) {
+        case 'rhythm':
+          description = e.message;
+          break;
+        case 'shock':
+          description = `Shock Delivered @ ${e.energy}J (Rhythm: ${e.rhythmBefore})`;
+          break;
+        case 'compressor':
+          description = e.message;
+          break;
+        case 'pulse':
+          description = 'Pulse Check Performed';
+          break;
+        case 'adrenaline':
+          description = `Adrenaline 1mg IV`;
+          break;
+        case 'amiodarone':
+          description = `Amiodarone ${e.dose}mg IV`;
+          break;
+        case 'lidocaine':
+          description = `Xylocaine ${e.dose} mg/kg IV`;
+          break;
+        case 'discretionary_med':
+          description = e.medication || e.dosage || 'Medication Administered';
+          break;
+        case 'procedure':
+          description = e.procedure || 'Procedure Performed';
+          break;
+        case 'cycle':
+          description = e.message;
+          break;
+        default:
+          description = e.message;
+      }
+      return `<tr><td>${e.timestamp}</td><td>${description}</td><td>Cycle ${e.cycle || '-'}</td></tr>`;
+    };
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>CPR Session Report</title>
+        <style>
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+          body {
+            font-family: 'Sarabun', 'Tahoma', Arial, sans-serif;
+            margin: 20px;
+            color: #1e293b;
+          }
+          h1 {
+            color: #1e40af;
+            font-size: 24px;
+            margin-bottom: 20px;
+          }
+          .summary-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+          }
+          .summary-box p {
+            margin: 5px 0;
+          }
+          .warning {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            color: #92400e;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          th {
+            background: #1e40af;
+            color: white;
+            padding: 10px;
+            text-align: left;
+          }
+          td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+          }
+          tr:nth-child(even) {
+            background: #f8fafc;
+          }
+          .notes {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+          }
+          .notes h3 {
+            margin-top: 0;
+            color: #1e40af;
+          }
+          .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 10px;
+          }
+          .print-button {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 20px;
+          }
+          .print-button:hover {
+            background: #1e3a8a;
+          }
+        </style>
+      </head>
+      <body>
+        <button onclick="window.print()" class="print-button no-print">🖨️ Print / Save as PDF</button>
+
+        <h1>CPR Session Report</h1>
+
+        <div class="summary-box">
+          <p><strong>Start:</strong> ${startTime || 'N/A'}</p>
+          <p><strong>Duration:</strong> ${formatTime(totalSeconds)}</p>
+          <p><strong>Cycles:</strong> ${currentCycle}</p>
+          <p><strong>${sessionEnded && finalOutcome ? 'Outcome' : 'Rhythm'}:</strong> ${outcomeText}</p>
+        </div>
+
+        ${(!sessionEnded || !finalOutcome) ? `
+          <div class="warning">
+            <strong>⚠️ Warning:</strong> CPR Effort Ongoing - Final outcome not determined
+          </div>
+        ` : ''}
+
+        <div class="summary-box">
+          <h3>Summary</h3>
+          <p>
+            <strong>Shocks:</strong> ${shockCount} | 
+            <strong>Adrenaline:</strong> ${adrenalineCount} | 
+            <strong>Amiodarone:</strong> ${amiodaroneTotal}mg | 
+            <strong>Lidocaine:</strong> ${lidocaineCumulativeDose} mg/kg | 
+            <strong>Compressor Changes:</strong> ${compressorChanges}
+          </p>
+        </div>
+
+        ${filteredEvents.length > 0 ? `
+          <h3>Event Log</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Cycle</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredEvents.map(formatEventForHTML).join('')}
+            </tbody>
+          </table>
+        ` : ''}
+
+        ${doctorNotes ? `
+          <div class="notes">
+            <h3>Note1 (During CPR)</h3>
+            <p>${doctorNotes.replace(/\n/g, '<br>')}</p>
+          </div>
+        ` : ''}
+
+        ${notes ? `
+          <div class="notes">
+            <h3>Note2 (End Session)</h3>
+            <p>${notes.replace(/\n/g, '<br>')}</p>
+          </div>
+        ` : ''}
+
+        <div class="footer">
+          Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const newWindow = window.open(url, '_blank');
+
+    if (newWindow) {
+      newWindow.onload = () => {
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      };
+    } else {
+      // Fallback to download if popup blocked
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CPR_Session_${new Date().toISOString().slice(0, 10)}_${new Date().getTime()}.html`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
+  };
+
 
 
   return (
@@ -1390,13 +1632,13 @@ export default function CPRTracker() {
             )}
 
             <Button 
-              onClick={exportGuestPDF}
+              onClick={() => setShowExportDialog(true)}
               variant="outline"
               className="border-blue-600 text-blue-400 hover:bg-blue-900/50 h-12"
               disabled={totalSeconds === 0}
             >
               <FileText className="w-5 h-5 mr-2" />
-              Export PDF
+              Export Report
             </Button>
           </div>
         </div>
@@ -1667,6 +1909,42 @@ export default function CPRTracker() {
                 Confirm
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Export Report</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 py-4">
+            <p className="text-slate-400 text-sm">Choose export format:</p>
+
+            <Button
+              onClick={() => {
+                exportHTML();
+                setShowExportDialog(false);
+              }}
+              className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold"
+            >
+              <FileText className="w-5 h-5 mr-2" />
+              HTML Report (Better for Thai)
+            </Button>
+
+            <Button
+              onClick={() => {
+                exportGuestPDF();
+                setShowExportDialog(false);
+              }}
+              variant="outline"
+              className="w-full h-14 border-slate-600 text-slate-300 hover:bg-slate-800 text-lg font-semibold"
+            >
+              <FileText className="w-5 h-5 mr-2" />
+              PDF Download
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
