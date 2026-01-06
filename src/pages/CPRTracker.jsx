@@ -960,14 +960,33 @@ export default function CPRTracker() {
     // Determine which dose to snooze
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const lidocaineGivenCount = events.filter(e => e.type === 'lidocaine').length;
-    const shouldSnooze1mg = isShockable && shockCount >= 8 && lidocaineGivenCount === 0 && lidocaineCumulativeDose < 3 && !lidocaine1mgDismissed;
-    const shouldSnooze05mg = isShockable && lidocaineGivenCount >= 1 && lidocaineCumulativeDose < 3 && !lidocaine05mgDismissed && (
-      (shockCount >= 11 && lidocaineGivenCount === 1) ||
-      (shockCount >= 14 && lidocaineGivenCount === 2) ||
-      (shockCount >= 17 && lidocaineGivenCount === 3) ||
-      (shockCount >= 20 && lidocaineGivenCount === 4) ||
-      (shockCount >= 23 && lidocaineGivenCount >= 5)
-    );
+    
+    let shouldSnooze1mg = false;
+    let shouldSnooze05mg = false;
+    
+    if (soundEnabled) {
+      // Coach mode: Time-based logic
+      if (isShockable && amiodarone450ReachedTime !== null && lidocaineCumulativeDose < 3) {
+        const timeSinceAmio450 = totalSeconds - amiodarone450ReachedTime;
+        const timeSinceLastLidocaine = lastLidocaineTime !== null ? totalSeconds - lastLidocaineTime : null;
+        
+        if (lidocaineGivenCount === 0) {
+          shouldSnooze1mg = timeSinceAmio450 >= 360 && !lidocaine1mgDismissed;
+        } else {
+          shouldSnooze05mg = timeSinceLastLidocaine !== null && timeSinceLastLidocaine >= 360 && !lidocaine05mgDismissed;
+        }
+      }
+    } else {
+      // Track mode: Shock-based logic
+      shouldSnooze1mg = isShockable && shockCount >= 8 && lidocaineGivenCount === 0 && lidocaineCumulativeDose < 3 && !lidocaine1mgDismissed;
+      shouldSnooze05mg = isShockable && lidocaineGivenCount >= 1 && lidocaineCumulativeDose < 3 && !lidocaine05mgDismissed && (
+        (shockCount >= 11 && lidocaineGivenCount === 1) ||
+        (shockCount >= 14 && lidocaineGivenCount === 2) ||
+        (shockCount >= 17 && lidocaineGivenCount === 3) ||
+        (shockCount >= 20 && lidocaineGivenCount === 4) ||
+        (shockCount >= 23 && lidocaineGivenCount >= 5)
+      );
+    }
 
     if (shouldSnooze1mg) {
       const prevSnoozedUntil = lidocaine1mgSnoozedUntil;
