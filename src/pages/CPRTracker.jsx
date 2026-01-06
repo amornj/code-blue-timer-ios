@@ -367,7 +367,7 @@ export default function CPRTracker() {
     ];
 
     setBannerEvents(newBannerEvents);
-    }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks, adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, lidocaine1mgDismissed, lidocaine05mgDismissed, shockCount, adrenalineSnoozedUntil, amiodarone300SnoozedUntil, amiodarone150SnoozedUntil, lidocaine1mgSnoozedUntil, lidocaine05mgSnoozedUntil, soundEnabled]);
+    }, [currentCycle, cycleSeconds, totalSeconds, currentRhythm, adrenalineCount, adrenalineFrequency, lastAdrenalineTime, amiodaroneTotal, adrenalineDue, amiodarone300Due, amiodarone150Due, compressorChanges, pulseChecks, lucasActive, initialRhythm, lidocaineCumulativeDose, lastLidocaineTime, lidocaine1mgDue, lidocaine05mgDue, cyclesWithShocks, adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, lidocaine1mgDismissed, lidocaine05mgDismissed, shockCount, adrenalineSnoozedUntil, amiodarone300SnoozedUntil, amiodarone150SnoozedUntil, lidocaine1mgSnoozedUntil, lidocaine05mgSnoozedUntil, soundEnabled, amiodarone450ReachedTime, events]);
 
   // Timer effect
   useEffect(() => {
