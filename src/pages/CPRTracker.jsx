@@ -317,7 +317,7 @@ export default function CPRTracker() {
       },
       {
         type: 'compressor',
-        label: lucasActive ? 'Resume Chest Compressor' : 'New Rescuer',
+        label: lucasActive ? 'LUCAS activated' : 'New Rescuer',
         timing: 'Every cycle',
         status: lucasActive ? 'pending' : (cycleComplete && compressorChanges < cycle ? 'active' : (compressorChanges >= cycle ? 'completed' : 'pending'))
       },
@@ -350,7 +350,7 @@ export default function CPRTracker() {
       ...(isShockable && lidocaineCumulativeDose < 3 ? [{
         type: 'lidocaine',
         label: 'Xylocaine',
-        timing: inTrackMode ? 'PRN' : '6 min after Amio 450mg',
+        timing: inTrackMode ? 'PRN' : 'Every 5-10 minutes',
         dose: null, // Always use dialog for dose selection
         status: (() => {
           if (inTrackMode) return 'pending';
