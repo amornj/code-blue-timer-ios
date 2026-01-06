@@ -5,10 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted, onSyncCycle, adrenalineFrequency = 4, lastAdrenalineTime = null }) {
-  const [showModeDialog, setShowModeDialog] = useState(false);
-  const [pendingMode, setPendingMode] = useState(null);
-  const [syncPressed, setSyncPressed] = useState(false);
+export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted, adrenalineFrequency = 4, lastAdrenalineTime = null }) {
+        const [showModeDialog, setShowModeDialog] = useState(false);
+        const [pendingMode, setPendingMode] = useState(null);
   
   const progress = (cycleSeconds / 120) * 100;
   const remainingSeconds = 120 - cycleSeconds;
@@ -44,11 +43,7 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
     });
   };
 
-  const handleSync = () => {
-    setSyncPressed(true);
-    onSyncCycle();
-    setTimeout(() => setSyncPressed(false), 2000);
-  };
+
 
   const isUrgent = remainingSeconds <= 10;
 
@@ -60,21 +55,6 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
     }`}>
       {/* Total CPR Time */}
       <div className="mb-6 text-center relative">
-        {/* Sync Button - Top Left */}
-        <div className="absolute top-0 left-0">
-          <Button
-            onClick={handleSync}
-            disabled={!hasStarted}
-            className={`h-7 px-3 rounded-lg text-[11px] font-medium transition-all border-0 ${
-              syncPressed 
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
-                : 'bg-black/30 hover:bg-black/40 text-slate-300'
-            }`}
-          >
-            +1 min
-          </Button>
-        </div>
-
         {/* Mode Toggle - Top Right (Vertical) */}
         <div className="absolute top-0 right-0 flex flex-col items-center gap-2">
           <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${soundEnabled ? 'text-green-400' : 'text-slate-500'}`}>
