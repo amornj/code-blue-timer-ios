@@ -18,6 +18,8 @@ export default function EventBanner({
   onDismissLidocaine,
   onSnoozeLidocaine,
   onAdrenalineFrequencyChange,
+  onSyncPulseCheck,
+  pulseCheckSynced,
   lucasActive,
   onToggleLucas,
   soundEnabled = false,
@@ -131,7 +133,23 @@ export default function EventBanner({
             </div>
           )}
 
-
+          {/* SYNC Button for Pulse Check */}
+          {event.type === 'pulse' && (
+            <div className="absolute top-1 right-1">
+              <Button
+                onClick={onSyncPulseCheck}
+                disabled={disabled || pulseCheckSynced}
+                size="sm"
+                className={`h-6 px-2.5 text-[11px] font-medium border-0 ${
+                  pulseCheckSynced 
+                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    : 'bg-black/30 hover:bg-black/40 text-slate-300'
+                }`}
+              >
+                {pulseCheckSynced ? 'SYNCED' : 'SYNC'}
+              </Button>
+            </div>
+          )}
           
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-center text-center gap-2 flex-1">

@@ -467,6 +467,8 @@ export default function CPRTracker() {
     setShockDeliveredThisCycle(false);
     setMedicationCounts({});
     setUsedProcedures([]);
+    setSyncPressCount(0);
+    setPulseCheckSynced(false);
     setAdrenalineDismissed(false);
     setAmiodarone300Dismissed(false);
     setAmiodarone150Dismissed(false);
@@ -504,15 +506,97 @@ export default function CPRTracker() {
     const newCount = pulseChecks + 1;
     setPulseChecks(newCount);
     addEvent('pulse', `Pulse check performed (Cycle ${currentCycle})`);
-
-    setCurrentCycle(prev => prev + 1);
-    setCycleSeconds(0);
-    setShockDeliveredThisCycle(false);
-    setRhythmSelectionStage('unselected');
-    addEvent('cycle', `Cycle ${currentCycle + 1} started`);
+    
+    // Only move to next cycle if not synced
+    if (!pulseCheckSynced) {
+      setCurrentCycle(prev => prev + 1);
+      setCycleSeconds(0);
+      setShockDeliveredThisCycle(false);
+      setRhythmSelectionStage('unselected');
+      addEvent('cycle', `Cycle ${currentCycle + 1} started`);
+    } else {
+      // Just reset cycle timer without advancing cycle
+      setCycleSeconds(0);
+      setShockDeliveredThisCycle(false);
+      setRhythmSelectionStage('unselected');
+      setPulseCheckSynced(false); // Reset sync flag
+    }
   };
 
+  const [syncPressCount, setSyncPressCount] = useState(0);
+  const [pulseCheckSynced, setPulseCheckSynced] = useState(false);
 
+  const handleSyncCycle = () => {
+    playClick();
+    
+    const prevTotalSeconds = totalSeconds;
+    const prevCycle = currentCycle;
+    const newCount = syncPressCount + 1;
+    
+    setTotalSeconds(prev => prev + 60); // Add 1 minute
+    setSyncPressCount(newCount);
+    
+    if (newCount === 2) {
+      // Second press - add cycle
+      const prevCycleForUndo = currentCycle;
+      setCurrentCycle(prev => prev + 1);
+      setCycleSeconds(0);
+      setShockDeliveredThisCycle(false);
+      setRhythmSelectionStage('unselected');
+      addEvent('cycle', `Cycle ${currentCycle + 1} started - Time adjusted`);
+      setSyncPressCount(0); // Reset counter
+      
+      toast.success('Added +1 min & Cycle +1', {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setTotalSeconds(prevTotalSeconds);
+            setCurrentCycle(prevCycleForUndo);
+            setSyncPressCount(0);
+            setEvents(prev => prev.slice(0, -1));
+          }
+        }
+      });
+    } else {
+      // First press - just add time
+      toast.success('Added +1 min (press again to add cycle)', {
+        duration: 4000,
+        position: 'bottom-center',
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            setTotalSeconds(prevTotalSeconds);
+            setSyncPressCount(prev => prev - 1);
+          }
+        }
+      });
+    }
+  };
+
+  const handleSyncPulseCheck = () => {
+    playClick();
+    
+    const prevCycleSeconds = cycleSeconds;
+    const prevSynced = pulseCheckSynced;
+    
+    // Set cycle time to 115 seconds so alarms trigger together (at 110s+ for both)
+    setCycleSeconds(115);
+    setPulseCheckSynced(true);
+    
+    toast.success('Pulse check synced - cycle will not advance on confirm', {
+      duration: 4000,
+      position: 'bottom-center',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setCycleSeconds(prevCycleSeconds);
+          setPulseCheckSynced(prevSynced);
+        }
+      }
+    });
+  };
 
   const handleConfirmAdrenaline = () => {
     playClick();
@@ -1700,6 +1784,7 @@ export default function CPRTracker() {
           soundEnabled={soundEnabled}
           onSoundToggle={setSoundEnabled}
           hasStarted={hasStarted}
+          onSyncCycle={handleSyncCycle}
           adrenalineFrequency={adrenalineFrequency}
           lastAdrenalineTime={lastAdrenalineTime}
         />
@@ -1732,6 +1817,8 @@ export default function CPRTracker() {
           onDismissLidocaine={handleDismissLidocaine}
           onSnoozeLidocaine={handleSnoozeLidocaine}
           onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
+          onSyncPulseCheck={handleSyncPulseCheck}
+          pulseCheckSynced={pulseCheckSynced}
           lucasActive={lucasActive}
           onToggleLucas={handleToggleLucas}
           soundEnabled={soundEnabled}
