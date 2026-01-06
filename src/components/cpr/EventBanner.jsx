@@ -139,7 +139,7 @@ export default function EventBanner({
               <div className="font-semibold text-sm">{event.label}</div>
               <div className="text-xs opacity-75">{event.timing}</div>
             
-              {(event.status === 'active' || (event.status === 'pending' && isMedicationButton(event.type))) && (
+              {(event.status === 'active' || (event.status === 'pending' && isMedicationButton(event.type) && !soundEnabled)) && (
                 <div className="mt-2 w-full space-y-1">
                   <div className="relative">
                     <Button 
