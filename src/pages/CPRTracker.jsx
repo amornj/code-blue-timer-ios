@@ -86,6 +86,7 @@ export default function CPRTracker() {
   const [lastLidocaineTime, setLastLidocaineTime] = useState(null);
   const [lidocaine1mgDue, setLidocaine1mgDue] = useState(false);
   const [lidocaine05mgDue, setLidocaine05mgDue] = useState(false);
+  const [amiodarone450ReachedTime, setAmiodarone450ReachedTime] = useState(null); // Track when amiodarone reaches 450mg
   
   // LUCAS device and doctor notes
   const [lucasActive, setLucasActive] = useState(false);
@@ -240,16 +241,37 @@ export default function CPRTracker() {
     const shouldShowAmiodarone300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300;
     const shouldShowAmiodarone150 = isShockable && shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450;
 
-    // Lidocaine (Xylocaine) rules - based on dose number and max cumulative dose of 3 mg/kg
+    // Lidocaine (Xylocaine) rules - Coach mode: 6 minutes after amiodarone 450mg, then every 6 minutes
+    // Track mode: based on dose number and max cumulative dose of 3 mg/kg
     const lidocaineGivenCount = events.filter(e => e.type === 'lidocaine').length;
-    const shouldShowLidocaine1mg = isShockable && shockCount >= 8 && lidocaineGivenCount === 0 && lidocaineCumulativeDose < 3;
-    const shouldShowLidocaine2nd = isShockable && shockCount >= 11 && lidocaineGivenCount === 1 && lidocaineCumulativeDose < 3;
-    const shouldShowLidocaine3rd = isShockable && shockCount >= 14 && lidocaineGivenCount === 2 && lidocaineCumulativeDose < 3;
-    const shouldShowLidocaine4th = isShockable && shockCount >= 17 && lidocaineGivenCount === 3 && lidocaineCumulativeDose < 3;
-    const shouldShowLidocaine5th = isShockable && shockCount >= 20 && lidocaineGivenCount === 4 && lidocaineCumulativeDose < 3;
-    // Continue pattern for additional doses (every 3 shocks after 20th)
-    const shouldShowLidocaineNth = isShockable && shockCount >= 23 && lidocaineGivenCount >= 5 && lidocaineCumulativeDose < 3 && (shockCount - 20) % 3 === 0;
-    const shouldShowLidocaine05mg = shouldShowLidocaine2nd || shouldShowLidocaine3rd || shouldShowLidocaine4th || shouldShowLidocaine5th || shouldShowLidocaineNth;
+    
+    let shouldShowLidocaine1mg = false;
+    let shouldShowLidocaine05mg = false;
+    
+    if (soundEnabled) {
+      // Coach mode: Time-based after amiodarone 450mg
+      if (isShockable && amiodarone450ReachedTime !== null && lidocaineCumulativeDose < 3) {
+        const timeSinceAmio450 = totalSeconds - amiodarone450ReachedTime;
+        const timeSinceLastLidocaine = lastLidocaineTime !== null ? totalSeconds - lastLidocaineTime : null;
+        
+        if (lidocaineGivenCount === 0) {
+          // First dose: 6 minutes after amiodarone 450mg
+          shouldShowLidocaine1mg = timeSinceAmio450 >= 360; // 6 minutes = 360 seconds
+        } else {
+          // Subsequent doses: every 6 minutes
+          shouldShowLidocaine05mg = timeSinceLastLidocaine !== null && timeSinceLastLidocaine >= 360;
+        }
+      }
+    } else {
+      // Track mode: Shock-based
+      shouldShowLidocaine1mg = isShockable && shockCount >= 8 && lidocaineGivenCount === 0 && lidocaineCumulativeDose < 3;
+      const shouldShowLidocaine2nd = isShockable && shockCount >= 11 && lidocaineGivenCount === 1 && lidocaineCumulativeDose < 3;
+      const shouldShowLidocaine3rd = isShockable && shockCount >= 14 && lidocaineGivenCount === 2 && lidocaineCumulativeDose < 3;
+      const shouldShowLidocaine4th = isShockable && shockCount >= 17 && lidocaineGivenCount === 3 && lidocaineCumulativeDose < 3;
+      const shouldShowLidocaine5th = isShockable && shockCount >= 20 && lidocaineGivenCount === 4 && lidocaineCumulativeDose < 3;
+      const shouldShowLidocaineNth = isShockable && shockCount >= 23 && lidocaineGivenCount >= 5 && lidocaineCumulativeDose < 3 && (shockCount - 20) % 3 === 0;
+      shouldShowLidocaine05mg = shouldShowLidocaine2nd || shouldShowLidocaine3rd || shouldShowLidocaine4th || shouldShowLidocaine5th || shouldShowLidocaineNth;
+    }
 
     // Set due flags for tracking
     if (shouldShowAdrenaline && !adrenalineDue && !adrenalineDismissed) {
@@ -328,7 +350,7 @@ export default function CPRTracker() {
       ...(isShockable && lidocaineCumulativeDose < 3 ? [{
         type: 'lidocaine',
         label: 'Xylocaine',
-        timing: inTrackMode ? 'PRN' : 'After 8th/11th/14th/17th/20th shock',
+        timing: inTrackMode ? 'PRN' : '6 min after Amio 450mg',
         dose: null, // Always use dialog for dose selection
         status: (() => {
           if (inTrackMode) return 'pending';
@@ -468,6 +490,7 @@ export default function CPRTracker() {
     setLastLidocaineTime(null);
     setLidocaine1mgDue(false);
     setLidocaine05mgDue(false);
+    setAmiodarone450ReachedTime(null);
     setDiscretionaryMeds([]);
     setShockDeliveredThisCycle(false);
     setMedicationCounts({});
@@ -723,7 +746,13 @@ export default function CPRTracker() {
     }
 
     playClick();
-    setAmiodaroneTotal(prev => prev + amiodaroneDose);
+    const newTotal = amiodaroneTotal + amiodaroneDose;
+    setAmiodaroneTotal(newTotal);
+
+    // Track when amiodarone reaches 450mg for Xylocaine timing
+    if (newTotal >= 450 && amiodarone450ReachedTime === null) {
+      setAmiodarone450ReachedTime(totalSeconds);
+    }
 
     if (amiodaroneDose === 300) {
       setAmiodarone300Due(false);
