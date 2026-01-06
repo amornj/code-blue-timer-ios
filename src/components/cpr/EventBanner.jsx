@@ -138,7 +138,7 @@ export default function EventBanner({
             <div className="flex flex-col items-center text-center gap-2 flex-1">
               <div className="font-semibold text-sm">{event.label}</div>
               <div className="text-xs opacity-75">{event.timing}</div>
-            
+
               {(event.status === 'active' || (event.status === 'pending' && isMedicationButton(event.type) && !soundEnabled)) && (
                 <div className="mt-2 w-full space-y-1">
                   <div className="relative">
@@ -150,19 +150,11 @@ export default function EventBanner({
                     >
                       <Check className="w-4 h-4 mr-1" /> {event.status === 'active' ? 'Confirm' : 'Give'}
                     </Button>
-                    {/* Show snoozed indicator under Give button */}
-                    {((event.type === 'adrenaline' && adrenalineSnoozed) ||
-                      (event.type === 'amiodarone' && amiodaroneSnoozed) ||
-                      (event.type === 'lidocaine' && lidocaineSnoozed)) && (
-                      <div className="text-center text-yellow-400 text-xs font-semibold mt-1">
-                        Snoozed
-                      </div>
-                    )}
                   </div>
                   {event.status === 'active' && isMedicationButton(event.type) && soundEnabled && (
                     <Button 
                       size="sm" 
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-slate-600 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleSnooze(event)}
                       disabled={disabled}
                     >
@@ -182,7 +174,18 @@ export default function EventBanner({
                   )}
                 </div>
               )}
-              
+
+              {/* Show snoozed indicator for medications - always visible when snoozed */}
+              {isMedicationButton(event.type) && (
+                (event.type === 'adrenaline' && adrenalineSnoozed) ||
+                (event.type === 'amiodarone' && amiodaroneSnoozed) ||
+                (event.type === 'lidocaine' && lidocaineSnoozed)
+              ) && (
+                <div className="text-center text-yellow-400 text-xs font-semibold mt-1">
+                  Snoozed
+                </div>
+              )}
+
               {event.status === 'completed' && (
                 <div className="flex items-center gap-1 text-green-400 text-xs font-medium">
                   <Check className="w-4 h-4" /> Done
