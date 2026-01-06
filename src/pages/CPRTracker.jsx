@@ -386,11 +386,16 @@ export default function CPRTracker() {
     }
   }, [isRunning, cycleSeconds, playThud]);
 
-  // Beep sound effect for active alerts
+  // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
     const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
+    const needsRhythmSelection = rhythmSelectionStage === 'unselected' && isRunning;
+    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
+    const shockButtonActive = isShockable && !(soundEnabled && shockDeliveredThisCycle);
     
-    if (hasActiveAlert && isRunning) {
+    const shouldBeep = hasActiveAlert || needsRhythmSelection || shockButtonActive;
+    
+    if (shouldBeep && isRunning && soundEnabled) {
       // Clear any existing interval
       if (beepIntervalRef.current) {
         clearInterval(beepIntervalRef.current);
@@ -417,7 +422,7 @@ export default function CPRTracker() {
         beepIntervalRef.current = null;
       }
     }
-  }, [bannerEvents, isRunning, playBeep]);
+  }, [bannerEvents, isRunning, playBeep, rhythmSelectionStage, currentRhythm, soundEnabled, shockDeliveredThisCycle]);
 
   const handleStart = () => {
     if (!isRunning && totalSeconds === 0) {
