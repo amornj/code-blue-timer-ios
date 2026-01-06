@@ -175,14 +175,24 @@ export default function EventBanner({
                 </div>
               )}
 
-              {/* Show snoozed indicator for medications - always visible when snoozed */}
+              {/* Show Give Now button and snoozed indicator for medications - always visible when snoozed */}
               {isMedicationButton(event.type) && (
                 (event.type === 'adrenaline' && adrenalineSnoozed) ||
                 (event.type === 'amiodarone' && amiodaroneSnoozed) ||
                 (event.type === 'lidocaine' && lidocaineSnoozed)
               ) && (
-                <div className="text-center text-yellow-400 text-xs font-semibold mt-1">
-                  Snoozed
+                <div className="w-full space-y-1 mt-2">
+                  <Button 
+                    size="sm" 
+                    className={`w-full ${getButtonColors(event.type)} text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed`}
+                    onClick={() => handleConfirm(event)}
+                    disabled={disabled}
+                  >
+                    <Check className="w-4 h-4 mr-1" /> Give Now
+                  </Button>
+                  <div className="text-center text-yellow-400 text-xs font-semibold">
+                    Snoozed
+                  </div>
                 </div>
               )}
 
