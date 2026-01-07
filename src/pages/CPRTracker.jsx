@@ -112,12 +112,27 @@ export default function CPRTracker() {
   const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
   const pulseCheckAudioRef = useRef(null);
+  const adrenalineAudioRef = useRef(null);
+  const amiodarone300AudioRef = useRef(null);
+  const amiodarone150AudioRef = useRef(null);
+  const shockableAudioRef = useRef(null);
+  const nonshockableAudioRef = useRef(null);
+  
   const [pulseCheckSoundPlayed, setPulseCheckSoundPlayed] = useState(false);
+  const [adrenalineSoundPlayed, setAdrenalineSoundPlayed] = useState(false);
+  const [amiodarone300SoundPlayed, setAmiodarone300SoundPlayed] = useState(false);
+  const [amiodarone150SoundPlayed, setAmiodarone150SoundPlayed] = useState(false);
+  const [rhythmSoundPlayed, setRhythmSoundPlayed] = useState(false);
 
-  // Initialize Web Audio API and pulse check sound
+  // Initialize Web Audio API and all sound files
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    pulseCheckAudioRef.current = new Audio('/src/PulseCheckNow.mp3');
+    pulseCheckAudioRef.current = new Audio('/src/pulsecheck.mp3');
+    adrenalineAudioRef.current = new Audio('/src/adrenaline.mp3');
+    amiodarone300AudioRef.current = new Audio('/src/amiodarone300.mp3');
+    amiodarone150AudioRef.current = new Audio('/src/amiodarone150.mp3');
+    shockableAudioRef.current = new Audio('/src/shockable.mp3');
+    nonshockableAudioRef.current = new Audio('/src/nonshockable.mp3');
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -215,6 +230,86 @@ export default function CPRTracker() {
   useEffect(() => {
     setPulseCheckSoundPlayed(false);
   }, [currentCycle]);
+
+  // Play adrenaline sound when alert becomes active
+  useEffect(() => {
+    const adrenalineIntervalSeconds = adrenalineFrequency * 60;
+    const timeSinceLastAdrenaline = lastAdrenalineTime ? totalSeconds - lastAdrenalineTime : null;
+    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
+    const isPEAorAsystole = currentRhythm === 'PEA' || currentRhythm === 'Asystole';
+
+    const shouldShowAdrenaline = (() => {
+      if (adrenalineCount === 0) {
+        return isPEAorAsystole ? totalSeconds >= 10 : isShockable ? shockCount >= 2 : false;
+      }
+      if (isShockable && shockCountAtRhythmChange !== null) {
+        const shocksInCurrentShockableRhythm = shockCount - shockCountAtRhythmChange;
+        if (shocksInCurrentShockableRhythm < 2) return false;
+      }
+      return timeSinceLastAdrenaline !== null && timeSinceLastAdrenaline >= adrenalineIntervalSeconds;
+    })();
+
+    const isAdrenalineActive = shouldShowAdrenaline && !adrenalineDismissed && !(adrenalineSnoozedUntil !== null && totalSeconds < adrenalineSnoozedUntil);
+
+    if (isAdrenalineActive && !adrenalineSoundPlayed && soundEnabled && adrenalineAudioRef.current) {
+      adrenalineAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      setAdrenalineSoundPlayed(true);
+    }
+  }, [totalSeconds, adrenalineCount, lastAdrenalineTime, adrenalineFrequency, currentRhythm, shockCount, shockCountAtRhythmChange, adrenalineDismissed, adrenalineSnoozedUntil, adrenalineSoundPlayed, soundEnabled]);
+
+  // Reset adrenaline sound flag when dismissed or given
+  useEffect(() => {
+    setAdrenalineSoundPlayed(false);
+  }, [adrenalineCount, adrenalineDismissed]);
+
+  // Play amiodarone sounds when alerts become active
+  useEffect(() => {
+    const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
+    const shouldShow300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300;
+    const shouldShow150 = isShockable && shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450;
+
+    const is300Active = shouldShow300 && !amiodarone300Dismissed && !(amiodarone300SnoozedUntil !== null && totalSeconds < amiodarone300SnoozedUntil);
+    const is150Active = shouldShow150 && !amiodarone150Dismissed && !(amiodarone150SnoozedUntil !== null && totalSeconds < amiodarone150SnoozedUntil);
+
+    if (is300Active && !amiodarone300SoundPlayed && soundEnabled && amiodarone300AudioRef.current) {
+      amiodarone300AudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      setAmiodarone300SoundPlayed(true);
+    }
+
+    if (is150Active && !amiodarone150SoundPlayed && soundEnabled && amiodarone150AudioRef.current) {
+      amiodarone150AudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      setAmiodarone150SoundPlayed(true);
+    }
+  }, [currentRhythm, shockCount, amiodaroneTotal, amiodarone300Dismissed, amiodarone150Dismissed, amiodarone300SnoozedUntil, amiodarone150SnoozedUntil, totalSeconds, amiodarone300SoundPlayed, amiodarone150SoundPlayed, soundEnabled]);
+
+  // Reset amiodarone sound flags when dismissed or given
+  useEffect(() => {
+    setAmiodarone300SoundPlayed(false);
+    setAmiodarone150SoundPlayed(false);
+  }, [amiodaroneTotal, amiodarone300Dismissed, amiodarone150Dismissed]);
+
+  // Play rhythm sound when rhythm is selected
+  useEffect(() => {
+    if (rhythmSelectionStage === 'selected' && !rhythmSoundPlayed && soundEnabled) {
+      const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
+      const isNonShockable = currentRhythm === 'Asystole' || currentRhythm === 'PEA';
+
+      if (isShockable && shockableAudioRef.current) {
+        shockableAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        setRhythmSoundPlayed(true);
+      } else if (isNonShockable && nonshockableAudioRef.current) {
+        nonshockableAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        setRhythmSoundPlayed(true);
+      }
+    }
+  }, [rhythmSelectionStage, currentRhythm, rhythmSoundPlayed, soundEnabled]);
+
+  // Reset rhythm sound flag when rhythm selection is reset
+  useEffect(() => {
+    if (rhythmSelectionStage === 'unselected') {
+      setRhythmSoundPlayed(false);
+    }
+  }, [rhythmSelectionStage]);
 
   // Update banner events based on cycle and medication status
   useEffect(() => {
