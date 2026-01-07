@@ -111,10 +111,13 @@ export default function CPRTracker() {
   // Audio context and refs
   const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
+  const pulseCheckAudioRef = useRef(null);
+  const lastPulseCheckAlertRef = useRef(false);
 
-  // Initialize Web Audio API
+  // Initialize Web Audio API and pulse check sound
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    pulseCheckAudioRef.current = new Audio('/PulseCheckNow.mp3');
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -407,6 +410,19 @@ export default function CPRTracker() {
       return () => clearInterval(thudInterval);
     }
   }, [isRunning, cycleSeconds, playThud]);
+
+  // Play pulse check sound when alert becomes active
+  useEffect(() => {
+    const pulseCheckEvent = bannerEvents.find(e => e.type === 'pulse');
+    const isPulseCheckActive = pulseCheckEvent?.status === 'active';
+    
+    if (isPulseCheckActive && !lastPulseCheckAlertRef.current && soundEnabled && pulseCheckAudioRef.current) {
+      pulseCheckAudioRef.current.currentTime = 0;
+      pulseCheckAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+    }
+    
+    lastPulseCheckAlertRef.current = isPulseCheckActive;
+  }, [bannerEvents, soundEnabled]);
 
   // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
