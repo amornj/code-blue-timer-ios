@@ -127,12 +127,12 @@ export default function CPRTracker() {
   // Initialize Web Audio API and all sound files
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    pulseCheckAudioRef.current = new Audio('/src/pulsecheck.mp3');
-    adrenalineAudioRef.current = new Audio('/src/adrenaline.mp3');
-    amiodarone300AudioRef.current = new Audio('/src/amiodarone300.mp3');
-    amiodarone150AudioRef.current = new Audio('/src/amiodarone150.mp3');
-    shockableAudioRef.current = new Audio('/src/shockable.mp3');
-    nonshockableAudioRef.current = new Audio('/src/nonshockable.mp3');
+    pulseCheckAudioRef.current = new Audio('/pulsecheck.mp3');
+    adrenalineAudioRef.current = new Audio('/adrenaline.mp3');
+    amiodarone300AudioRef.current = new Audio('/amiodarone300.mp3');
+    amiodarone150AudioRef.current = new Audio('/amiodarone150.mp3');
+    shockableAudioRef.current = new Audio('/shockable.mp3');
+    nonshockableAudioRef.current = new Audio('/nonshockable.mp3');
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
