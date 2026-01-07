@@ -111,10 +111,13 @@ export default function CPRTracker() {
   // Audio context and refs
   const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
+  const pulseCheckAudioRef = useRef(null);
+  const [pulseCheckSoundPlayed, setPulseCheckSoundPlayed] = useState(false);
 
-  // Initialize Web Audio API
+  // Initialize Web Audio API and pulse check sound
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    pulseCheckAudioRef.current = new Audio('/src/PulseCheckNow.mp3');
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -196,6 +199,22 @@ export default function CPRTracker() {
     const cprTime = formatCPRTime(totalSeconds);
     setEvents(prev => [...prev, { type, message, timestamp, cprTime, cycle: currentCycle, ...extra }]);
   }, [totalSeconds, currentCycle, formatCPRTime]);
+
+  // Play pulse check sound when alert becomes active
+  useEffect(() => {
+    const cycleComplete = cycleSeconds >= CYCLE_DURATION - 5;
+    const isPulseCheckActive = cycleComplete && pulseChecks < currentCycle;
+    
+    if (isPulseCheckActive && !pulseCheckSoundPlayed && soundEnabled && pulseCheckAudioRef.current) {
+      pulseCheckAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      setPulseCheckSoundPlayed(true);
+    }
+  }, [cycleSeconds, pulseChecks, currentCycle, pulseCheckSoundPlayed, soundEnabled]);
+
+  // Reset pulse check sound flag when moving to next cycle
+  useEffect(() => {
+    setPulseCheckSoundPlayed(false);
+  }, [currentCycle]);
 
   // Update banner events based on cycle and medication status
   useEffect(() => {
