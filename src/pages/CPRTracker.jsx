@@ -127,12 +127,26 @@ export default function CPRTracker() {
   // Initialize Web Audio API and all sound files
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Create and preload all audio files
     pulseCheckAudioRef.current = new Audio('/pulsecheck.mp3');
+    pulseCheckAudioRef.current.preload = 'auto';
+    
     adrenalineAudioRef.current = new Audio('/adrenaline.mp3');
+    adrenalineAudioRef.current.preload = 'auto';
+    
     amiodarone300AudioRef.current = new Audio('/amiodarone300.mp3');
+    amiodarone300AudioRef.current.preload = 'auto';
+    
     amiodarone150AudioRef.current = new Audio('/amiodarone150.mp3');
+    amiodarone150AudioRef.current.preload = 'auto';
+    
     shockableAudioRef.current = new Audio('/shockable.mp3');
+    shockableAudioRef.current.preload = 'auto';
+    
     nonshockableAudioRef.current = new Audio('/nonshockable.mp3');
+    nonshockableAudioRef.current.preload = 'auto';
+    
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -537,15 +551,18 @@ export default function CPRTracker() {
         clearInterval(beepIntervalRef.current);
       }
       
-      // Play beep immediately
-      playBeep(800, 100);
-      
-      // Set up interval for continuous beeping
-      beepIntervalRef.current = setInterval(() => {
+      // Delay first beep to allow voice alert to play
+      const beepTimeout = setTimeout(() => {
         playBeep(800, 100);
-      }, 2000);
+        
+        // Set up interval for continuous beeping
+        beepIntervalRef.current = setInterval(() => {
+          playBeep(800, 100);
+        }, 2000);
+      }, 500);
       
       return () => {
+        clearTimeout(beepTimeout);
         if (beepIntervalRef.current) {
           clearInterval(beepIntervalRef.current);
           beepIntervalRef.current = null;
