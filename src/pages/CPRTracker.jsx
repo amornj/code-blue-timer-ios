@@ -129,22 +129,22 @@ export default function CPRTracker() {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
     
     // Create and preload all audio files
-    pulseCheckAudioRef.current = new Audio('/pulsecheck.mp3');
+    pulseCheckAudioRef.current = new Audio('src/pulsecheck.mp3');
     pulseCheckAudioRef.current.preload = 'auto';
     
-    adrenalineAudioRef.current = new Audio('/adrenaline.mp3');
+    adrenalineAudioRef.current = new Audio('src/adrenaline.mp3');
     adrenalineAudioRef.current.preload = 'auto';
     
-    amiodarone300AudioRef.current = new Audio('/amiodarone300.mp3');
+    amiodarone300AudioRef.current = new Audio('src/amiodarone300.mp3');
     amiodarone300AudioRef.current.preload = 'auto';
     
-    amiodarone150AudioRef.current = new Audio('/amiodarone150.mp3');
+    amiodarone150AudioRef.current = new Audio('src/amiodarone150.mp3');
     amiodarone150AudioRef.current.preload = 'auto';
     
-    shockableAudioRef.current = new Audio('/shockable.mp3');
+    shockableAudioRef.current = new Audio('src/shockable.mp3');
     shockableAudioRef.current.preload = 'auto';
     
-    nonshockableAudioRef.current = new Audio('/nonshockable.mp3');
+    nonshockableAudioRef.current = new Audio('src/nonshockable.mp3');
     nonshockableAudioRef.current.preload = 'auto';
     
     return () => {
