@@ -117,7 +117,7 @@ export default function CPRTracker() {
   // Initialize Web Audio API and pulse check sound
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    pulseCheckAudioRef.current = new Audio('/PulseCheckNow.mp3');
+    pulseCheckAudioRef.current = new Audio('src/PulseCheckNow.mp3');
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
