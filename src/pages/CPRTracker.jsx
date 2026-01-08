@@ -438,23 +438,12 @@ export default function CPRTracker() {
         
         playRhythmPattern();
         beepIntervalRef.current = setInterval(playRhythmPattern, 1000);
-      } else if (hasAmiodaroneAlert) {
-        // Special handling for amiodarone - high-low-low-high pattern
-        const playAmiodaronePattern = () => {
-          playBeep(1600, 80); // High
-          setTimeout(() => playBeep(800, 80), 100); // Low
-          setTimeout(() => playBeep(800, 80), 200); // Low
-          setTimeout(() => playBeep(1600, 80), 300); // High
-        };
-        
-        playAmiodaronePattern();
-        beepIntervalRef.current = setInterval(playAmiodaronePattern, 500);
       } else {
         // Set frequency and interval based on alert type
         let frequency = 800;
         let interval = 2000;
         
-        if (hasAdrenalineAlert || hasLidocaineAlert) {
+        if (hasAdrenalineAlert || hasAmiodaroneAlert || hasLidocaineAlert) {
           frequency = 1600;
           interval = 500;
         } else if (hasPulseCheckAlert || hasCompressorAlert) {
