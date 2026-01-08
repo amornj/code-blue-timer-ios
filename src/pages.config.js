@@ -1,11 +1,11 @@
-import CPRTracker from './pages/CPRTracker';
 import Records from './pages/Records';
+import CPRTracker from './pages/CPRTracker';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "CPRTracker": CPRTracker,
     "Records": Records,
+    "CPRTracker": CPRTracker,
 }
 
 export const pagesConfig = {
