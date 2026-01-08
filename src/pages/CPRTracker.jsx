@@ -125,12 +125,31 @@ export default function CPRTracker() {
   // Initialize Web Audio API and MP3 audio
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    
     adrenalineAudioRef.current = new Audio('/src/adrenaline.mp3');
+    adrenalineAudioRef.current.preload = 'auto';
+    adrenalineAudioRef.current.load();
+    
     shockableAudioRef.current = new Audio('/src/shockable.mp3');
+    shockableAudioRef.current.preload = 'auto';
+    shockableAudioRef.current.load();
+    
     nonshockableAudioRef.current = new Audio('/src/nonshockable.mp3');
+    nonshockableAudioRef.current.preload = 'auto';
+    nonshockableAudioRef.current.load();
+    
     pulsecheckAudioRef.current = new Audio('/src/pulsecheck.mp3');
+    pulsecheckAudioRef.current.preload = 'auto';
+    pulsecheckAudioRef.current.load();
+    
     amiodarone300AudioRef.current = new Audio('/src/amiodarone300.mp3');
+    amiodarone300AudioRef.current.preload = 'auto';
+    amiodarone300AudioRef.current.load();
+    
     amiodarone150AudioRef.current = new Audio('/src/amiodarone150.mp3');
+    amiodarone150AudioRef.current.preload = 'auto';
+    amiodarone150AudioRef.current.load();
+    
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
