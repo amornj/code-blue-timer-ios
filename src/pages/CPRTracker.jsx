@@ -425,8 +425,8 @@ export default function CPRTracker() {
       }
       
       // Use higher pitch and faster rate for adrenaline alerts
-      const frequency = hasAdrenalineAlert ? 1200 : 800;
-      const interval = hasAdrenalineAlert ? 1000 : 2000;
+      const frequency = hasAdrenalineAlert ? 1600 : 800;
+      const interval = hasAdrenalineAlert ? 500 : 2000;
       
       // Play beep immediately
       playBeep(frequency, 100);
