@@ -116,7 +116,7 @@ export default function CPRTracker() {
   // Initialize Web Audio API and adrenaline sound
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    adrenalineAudioRef.current = new Audio('/adrenaline.mp3');
+    adrenalineAudioRef.current = new Audio('src/adrenaline.mp3');
     adrenalineAudioRef.current.loop = true;
     return () => {
       if (audioContextRef.current) {
