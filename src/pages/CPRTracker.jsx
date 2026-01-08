@@ -411,6 +411,7 @@ export default function CPRTracker() {
   // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
     const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
+    const hasAdrenalineAlert = bannerEvents.some(e => e.type === 'adrenaline' && e.status === 'active');
     const needsRhythmSelection = rhythmSelectionStage === 'unselected' && isRunning;
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const shockButtonActive = isShockable && !(soundEnabled && shockDeliveredThisCycle);
@@ -423,13 +424,17 @@ export default function CPRTracker() {
         clearInterval(beepIntervalRef.current);
       }
       
+      // Use higher pitch and faster rate for adrenaline alerts
+      const frequency = hasAdrenalineAlert ? 1200 : 800;
+      const interval = hasAdrenalineAlert ? 1000 : 2000;
+      
       // Play beep immediately
-      playBeep(800, 100);
+      playBeep(frequency, 100);
       
       // Set up interval for continuous beeping
       beepIntervalRef.current = setInterval(() => {
-        playBeep(800, 100);
-      }, 2000);
+        playBeep(frequency, 100);
+      }, interval);
       
       return () => {
         if (beepIntervalRef.current) {
