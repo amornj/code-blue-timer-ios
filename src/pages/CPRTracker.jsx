@@ -72,8 +72,10 @@ export default function CPRTracker() {
   const [adrenalineDismissedTime, setAdrenalineDismissedTime] = useState(null);
   const [amiodarone300Dismissed, setAmiodarone300Dismissed] = useState(false);
   const [amiodarone150Dismissed, setAmiodarone150Dismissed] = useState(false);
+  const [amiodaroneDismissedShockCount, setAmiodaroneDismissedShockCount] = useState(null);
   const [lidocaine1mgDismissed, setLidocaine1mgDismissed] = useState(false);
   const [lidocaine05mgDismissed, setLidocaine05mgDismissed] = useState(false);
+  const [lidocaineDismissedTime, setLidocaineDismissedTime] = useState(null);
 
   // Track snoozed alarms (stores the time when snooze ends)
   const [adrenalineSnoozedUntil, setAdrenalineSnoozedUntil] = useState(null);
@@ -300,6 +302,26 @@ export default function CPRTracker() {
       }
     }
 
+    // Check if dismissed amiodarone should be alerted again (coach mode only)
+    if (soundEnabled && amiodaroneDismissedShockCount !== null) {
+      const shocksSinceDismissed = shockCount - amiodaroneDismissedShockCount;
+      if (shocksSinceDismissed >= 2) {
+        setAmiodarone300Dismissed(false);
+        setAmiodarone150Dismissed(false);
+        setAmiodaroneDismissedShockCount(null);
+      }
+    }
+
+    // Check if dismissed xylocaine should be alerted again (coach mode only)
+    if (soundEnabled && lidocaineDismissedTime !== null) {
+      const timeSinceDismissed = totalSeconds - lidocaineDismissedTime;
+      if (timeSinceDismissed >= 360) { // 6 minutes = 360 seconds
+        setLidocaine1mgDismissed(false);
+        setLidocaine05mgDismissed(false);
+        setLidocaineDismissedTime(null);
+      }
+    }
+
     // Determine adrenaline status - use shouldShow directly, not the state variable
     let adrenalineStatus = 'pending';
     const isAdrenalineSnoozed = adrenalineSnoozedUntil !== null && totalSeconds < adrenalineSnoozedUntil;
@@ -501,8 +523,10 @@ export default function CPRTracker() {
     setAdrenalineDismissedTime(null);
     setAmiodarone300Dismissed(false);
     setAmiodarone150Dismissed(false);
+    setAmiodaroneDismissedShockCount(null);
     setLidocaine1mgDismissed(false);
     setLidocaine05mgDismissed(false);
+    setLidocaineDismissedTime(null);
     setShockCountAtRhythmChange(null);
   };
 
@@ -836,8 +860,10 @@ export default function CPRTracker() {
     
     if (shouldDismiss300) {
       const prevDismissed = amiodarone300Dismissed;
+      const prevShockCount = amiodaroneDismissedShockCount;
       setAmiodarone300Due(false);
       setAmiodarone300Dismissed(true);
+      setAmiodaroneDismissedShockCount(shockCount);
       
       toast.info('Amiodarone 300mg alarm dismissed', {
         duration: 4000,
@@ -846,14 +872,17 @@ export default function CPRTracker() {
           label: 'Undo',
           onClick: () => {
             setAmiodarone300Dismissed(prevDismissed);
+            setAmiodaroneDismissedShockCount(prevShockCount);
             setAmiodarone300Due(true);
           }
         }
       });
     } else if (shouldDismiss150) {
       const prevDismissed = amiodarone150Dismissed;
+      const prevShockCount = amiodaroneDismissedShockCount;
       setAmiodarone150Due(false);
       setAmiodarone150Dismissed(true);
+      setAmiodaroneDismissedShockCount(shockCount);
       
       toast.info('Amiodarone 150mg alarm dismissed', {
         duration: 4000,
@@ -862,6 +891,7 @@ export default function CPRTracker() {
           label: 'Undo',
           onClick: () => {
             setAmiodarone150Dismissed(prevDismissed);
+            setAmiodaroneDismissedShockCount(prevShockCount);
             setAmiodarone150Due(true);
           }
         }
@@ -1042,8 +1072,10 @@ export default function CPRTracker() {
     
     if (shouldDismiss1mg) {
       const prevDismissed = lidocaine1mgDismissed;
+      const prevDismissedTime = lidocaineDismissedTime;
       setLidocaine1mgDue(false);
       setLidocaine1mgDismissed(true);
+      setLidocaineDismissedTime(totalSeconds);
       
       toast.info('Xylocaine 1st dose alarm dismissed', {
         duration: 4000,
@@ -1052,14 +1084,17 @@ export default function CPRTracker() {
           label: 'Undo',
           onClick: () => {
             setLidocaine1mgDismissed(prevDismissed);
+            setLidocaineDismissedTime(prevDismissedTime);
             setLidocaine1mgDue(true);
           }
         }
       });
     } else if (shouldDismiss05mg) {
       const prevDismissed = lidocaine05mgDismissed;
+      const prevDismissedTime = lidocaineDismissedTime;
       setLidocaine05mgDue(false);
       setLidocaine05mgDismissed(true);
+      setLidocaineDismissedTime(totalSeconds);
       
       toast.info('Xylocaine subsequent dose alarm dismissed', {
         duration: 4000,
@@ -1068,6 +1103,7 @@ export default function CPRTracker() {
           label: 'Undo',
           onClick: () => {
             setLidocaine05mgDismissed(prevDismissed);
+            setLidocaineDismissedTime(prevDismissedTime);
             setLidocaine05mgDue(true);
           }
         }
