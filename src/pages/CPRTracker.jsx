@@ -175,34 +175,38 @@ export default function CPRTracker() {
     };
   }, []);
 
+  // Function to unlock audio on user gesture (mobile requirement)
+  const unlockAudioOnGesture = useCallback(() => {
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+    
+    // Play and immediately pause all audio files at zero volume to unlock them (iOS requirement)
+    const unlockAudio = (audioRef) => {
+      if (audioRef.current) {
+        audioRef.current.volume = 0;
+        audioRef.current.play().then(() => {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          audioRef.current.volume = 1;
+        }).catch(() => {});
+      }
+    };
+    
+    unlockAudio(adrenalineAudioRef);
+    unlockAudio(shockableAudioRef);
+    unlockAudio(nonshockableAudioRef);
+    unlockAudio(pulsecheckAudioRef);
+    unlockAudio(amiodarone300AudioRef);
+    unlockAudio(amiodarone150AudioRef);
+  }, []);
+
   // Unlock audio on iOS/Android when coach mode is enabled
   useEffect(() => {
-    if (soundEnabled && audioContextRef.current) {
-      // Resume audio context (required for iOS)
-      if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume();
-      }
-      
-      // Play and immediately pause all audio files at zero volume to unlock them (iOS requirement)
-      const unlockAudio = (audioRef) => {
-        if (audioRef.current) {
-          audioRef.current.volume = 0;
-          audioRef.current.play().then(() => {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            audioRef.current.volume = 1;
-          }).catch(() => {});
-        }
-      };
-      
-      unlockAudio(adrenalineAudioRef);
-      unlockAudio(shockableAudioRef);
-      unlockAudio(nonshockableAudioRef);
-      unlockAudio(pulsecheckAudioRef);
-      unlockAudio(amiodarone300AudioRef);
-      unlockAudio(amiodarone150AudioRef);
+    if (soundEnabled) {
+      unlockAudioOnGesture();
     }
-  }, [soundEnabled]);
+  }, [soundEnabled, unlockAudioOnGesture]);
 
   // Function to play beep using Web Audio API
   const playBeep = useCallback((frequency = 800, duration = 100) => {
@@ -662,6 +666,9 @@ export default function CPRTracker() {
   };
 
   const handleConfirmPulseCheck = () => {
+    // Unlock audio on user gesture for mobile
+    unlockAudioOnGesture();
+    
     playClick();
     const newCount = pulseChecks + 1;
     setPulseChecks(newCount);
@@ -1314,6 +1321,9 @@ export default function CPRTracker() {
 
   const handleRhythmChange = (rhythm) => {
     if (rhythmSelectionStage === 'selected') return; // Cannot change if already selected
+    
+    // Unlock audio on user gesture for mobile
+    unlockAudioOnGesture();
     
     const prevRhythm = currentRhythm;
     const prevStage = rhythmSelectionStage;
