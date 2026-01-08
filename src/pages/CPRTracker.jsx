@@ -411,11 +411,6 @@ export default function CPRTracker() {
   // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
     const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
-    const hasAdrenalineAlert = bannerEvents.some(e => e.type === 'adrenaline' && e.status === 'active');
-    const hasAmiodaroneAlert = bannerEvents.some(e => e.type === 'amiodarone' && e.status === 'active');
-    const hasLidocaineAlert = bannerEvents.some(e => e.type === 'lidocaine' && e.status === 'active');
-    const hasPulseCheckAlert = bannerEvents.some(e => e.type === 'pulse' && e.status === 'active');
-    const hasCompressorAlert = bannerEvents.some(e => e.type === 'compressor' && e.status === 'active');
     const needsRhythmSelection = rhythmSelectionStage === 'unselected' && isRunning;
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const shockButtonActive = isShockable && !(soundEnabled && shockDeliveredThisCycle);
@@ -428,37 +423,13 @@ export default function CPRTracker() {
         clearInterval(beepIntervalRef.current);
       }
       
-      // Special handling for rhythm selection - high-low-high pattern
-      if (needsRhythmSelection) {
-        const playRhythmPattern = () => {
-          playBeep(1000, 100); // High
-          setTimeout(() => playBeep(600, 100), 150); // Low
-          setTimeout(() => playBeep(1000, 100), 300); // High
-        };
-        
-        playRhythmPattern();
-        beepIntervalRef.current = setInterval(playRhythmPattern, 1000);
-      } else {
-        // Set frequency and interval based on alert type
-        let frequency = 800;
-        let interval = 2000;
-        
-        if (hasAdrenalineAlert || hasAmiodaroneAlert || hasLidocaineAlert) {
-          frequency = 1600;
-          interval = 500;
-        } else if (hasPulseCheckAlert || hasCompressorAlert) {
-          frequency = 600;
-          interval = 2000;
-        }
-        
-        // Play beep immediately
-        playBeep(frequency, 100);
-        
-        // Set up interval for continuous beeping
-        beepIntervalRef.current = setInterval(() => {
-          playBeep(frequency, 100);
-        }, interval);
-      }
+      // Play beep immediately
+      playBeep(800, 100);
+      
+      // Set up interval for continuous beeping
+      beepIntervalRef.current = setInterval(() => {
+        playBeep(800, 100);
+      }, 2000);
       
       return () => {
         if (beepIntervalRef.current) {
