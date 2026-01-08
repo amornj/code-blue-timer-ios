@@ -413,9 +413,9 @@ export default function CPRTracker() {
       }
 
       // Set up interval for continuous beeping
-      // Medication alarms: 1600Hz at 150ms, Other alarms: 600Hz at 150ms
+      // Medication alarms: 1600Hz at 300ms, Other alarms: 600Hz at 150ms
       const frequency = shouldBeepMedication ? 1600 : 600;
-      const duration = 150;
+      const duration = shouldBeepMedication ? 300 : 150;
 
       beepIntervalRef.current = setInterval(() => {
         playBeep(frequency, duration);
