@@ -116,7 +116,7 @@ export default function CPRTracker() {
   // Initialize Web Audio API and adrenaline sound
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    adrenalineAudioRef.current = new Audio('/adrenaline.mp3');
+    adrenalineAudioRef.current = new Audio('src/adrenaline.mp3');
     adrenalineAudioRef.current.loop = true;
     return () => {
       if (audioContextRef.current) {
@@ -425,44 +425,36 @@ export default function CPRTracker() {
     
     const shouldBeep = hasActiveAlert || needsRhythmSelection || shockButtonActive;
     
-    // Handle adrenaline audio - PRIORITY
+    // Handle adrenaline audio
     if (hasAdrenalineAlert && isRunning && soundEnabled && adrenalineAudioRef.current) {
-      // Pause beep sounds when adrenaline plays (priority)
-      if (beepIntervalRef.current) {
-        clearInterval(beepIntervalRef.current);
-        beepIntervalRef.current = null;
-      }
       adrenalineAudioRef.current.play().catch(e => console.log('Audio play failed:', e));
     } else if (adrenalineAudioRef.current) {
       adrenalineAudioRef.current.pause();
       adrenalineAudioRef.current.currentTime = 0;
-      
-      // Resume beep sounds after adrenaline stops
-      if (shouldBeep && isRunning && soundEnabled) {
-        // Clear any existing interval
-        if (beepIntervalRef.current) {
-          clearInterval(beepIntervalRef.current);
-        }
-        
-        // Play beep immediately
-        playBeep(800, 100);
-        
-        // Set up interval for continuous beeping
-        beepIntervalRef.current = setInterval(() => {
-          playBeep(800, 100);
-        }, 2000);
-        
-        return () => {
-          if (beepIntervalRef.current) {
-            clearInterval(beepIntervalRef.current);
-            beepIntervalRef.current = null;
-          }
-        };
-      }
     }
     
-    // Stop beeping when no active alerts and no adrenaline
-    if (!shouldBeep || !soundEnabled) {
+    if (shouldBeep && isRunning && soundEnabled) {
+      // Clear any existing interval
+      if (beepIntervalRef.current) {
+        clearInterval(beepIntervalRef.current);
+      }
+      
+      // Play beep immediately
+      playBeep(800, 100);
+      
+      // Set up interval for continuous beeping
+      beepIntervalRef.current = setInterval(() => {
+        playBeep(800, 100);
+      }, 2000);
+      
+      return () => {
+        if (beepIntervalRef.current) {
+          clearInterval(beepIntervalRef.current);
+          beepIntervalRef.current = null;
+        }
+      };
+    } else {
+      // Stop beeping when no active alerts
       if (beepIntervalRef.current) {
         clearInterval(beepIntervalRef.current);
         beepIntervalRef.current = null;
