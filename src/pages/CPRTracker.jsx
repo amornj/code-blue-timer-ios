@@ -111,20 +111,13 @@ export default function CPRTracker() {
   // Audio context and refs
   const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
-  const adrenalineAudioRef = useRef(null);
 
-  // Initialize Web Audio API and adrenaline sound
+  // Initialize Web Audio API
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    adrenalineAudioRef.current = new Audio('src/adrenaline.mp3');
-    adrenalineAudioRef.current.loop = true;
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
-      }
-      if (adrenalineAudioRef.current) {
-        adrenalineAudioRef.current.pause();
-        adrenalineAudioRef.current = null;
       }
     };
   }, []);
@@ -418,20 +411,11 @@ export default function CPRTracker() {
   // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
     const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
-    const hasAdrenalineAlert = bannerEvents.some(e => e.type === 'adrenaline' && e.status === 'active');
     const needsRhythmSelection = rhythmSelectionStage === 'unselected' && isRunning;
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const shockButtonActive = isShockable && !(soundEnabled && shockDeliveredThisCycle);
     
     const shouldBeep = hasActiveAlert || needsRhythmSelection || shockButtonActive;
-    
-    // Handle adrenaline audio
-    if (hasAdrenalineAlert && isRunning && soundEnabled && adrenalineAudioRef.current) {
-      adrenalineAudioRef.current.play().catch(e => console.log('Audio play failed:', e));
-    } else if (adrenalineAudioRef.current) {
-      adrenalineAudioRef.current.pause();
-      adrenalineAudioRef.current.currentTime = 0;
-    }
     
     if (shouldBeep && isRunning && soundEnabled) {
       // Clear any existing interval
@@ -1851,21 +1835,11 @@ export default function CPRTracker() {
           amiodaroneTotal={amiodaroneTotal}
           lidocaineCumulativeDose={lidocaineCumulativeDose}
           soundEnabled={soundEnabled}
-          onSoundToggle={(newMode) => {
-            setSoundEnabled(newMode);
-            // Prime audio for iOS when enabling coach mode
-            if (newMode && adrenalineAudioRef.current) {
-              adrenalineAudioRef.current.play().then(() => {
-                adrenalineAudioRef.current.pause();
-                adrenalineAudioRef.current.currentTime = 0;
-              }).catch(e => console.log('Audio priming:', e));
-            }
-          }}
+          onSoundToggle={setSoundEnabled}
           hasStarted={hasStarted}
           onSyncCycle={handleSyncCycle}
           adrenalineFrequency={adrenalineFrequency}
           lastAdrenalineTime={lastAdrenalineTime}
-          adrenalineAudioRef={adrenalineAudioRef}
         />
 
         {/* Rhythm Selector */}
