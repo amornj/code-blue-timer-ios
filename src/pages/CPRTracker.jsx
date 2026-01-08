@@ -428,25 +428,37 @@ export default function CPRTracker() {
         clearInterval(beepIntervalRef.current);
       }
       
-      // Set frequency and interval based on alert type
-      let frequency = 800;
-      let interval = 2000;
-      
-      if (hasAdrenalineAlert || hasAmiodaroneAlert || hasLidocaineAlert) {
-        frequency = 1600;
-        interval = 500;
-      } else if (hasPulseCheckAlert || hasCompressorAlert) {
-        frequency = 600;
-        interval = 2000;
-      }
-      
-      // Play beep immediately
-      playBeep(frequency, 100);
-      
-      // Set up interval for continuous beeping
-      beepIntervalRef.current = setInterval(() => {
+      // Special handling for rhythm selection - high-low-high pattern
+      if (needsRhythmSelection) {
+        const playRhythmPattern = () => {
+          playBeep(1000, 100); // High
+          setTimeout(() => playBeep(600, 100), 150); // Low
+          setTimeout(() => playBeep(1000, 100), 300); // High
+        };
+        
+        playRhythmPattern();
+        beepIntervalRef.current = setInterval(playRhythmPattern, 1000);
+      } else {
+        // Set frequency and interval based on alert type
+        let frequency = 800;
+        let interval = 2000;
+        
+        if (hasAdrenalineAlert || hasAmiodaroneAlert || hasLidocaineAlert) {
+          frequency = 1600;
+          interval = 500;
+        } else if (hasPulseCheckAlert || hasCompressorAlert) {
+          frequency = 600;
+          interval = 2000;
+        }
+        
+        // Play beep immediately
         playBeep(frequency, 100);
-      }, interval);
+        
+        // Set up interval for continuous beeping
+        beepIntervalRef.current = setInterval(() => {
+          playBeep(frequency, 100);
+        }, interval);
+      }
       
       return () => {
         if (beepIntervalRef.current) {
