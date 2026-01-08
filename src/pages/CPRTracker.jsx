@@ -111,10 +111,13 @@ export default function CPRTracker() {
   // Audio context and refs
   const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
+  const adrenalineAudioRef = useRef(null);
+  const [adrenalineAlertPlayed, setAdrenalineAlertPlayed] = useState(false);
 
-  // Initialize Web Audio API
+  // Initialize Web Audio API and MP3 audio
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    adrenalineAudioRef.current = new Audio('/src/adrenaline.mp3');
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -407,6 +410,21 @@ export default function CPRTracker() {
       return () => clearInterval(thudInterval);
     }
   }, [isRunning, cycleSeconds, playThud]);
+
+  // Play adrenaline MP3 alert once per alert
+  useEffect(() => {
+    const adrenalineAlert = bannerEvents.find(e => e.type === 'adrenaline');
+    const isAdrenalineActive = adrenalineAlert?.status === 'active';
+    
+    if (isAdrenalineActive && !adrenalineAlertPlayed && soundEnabled && adrenalineAudioRef.current) {
+      adrenalineAudioRef.current.currentTime = 0;
+      adrenalineAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      setAdrenalineAlertPlayed(true);
+    } else if (!isAdrenalineActive && adrenalineAlertPlayed) {
+      // Reset flag when alert is no longer active
+      setAdrenalineAlertPlayed(false);
+    }
+  }, [bannerEvents, soundEnabled, adrenalineAlertPlayed]);
 
   // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
