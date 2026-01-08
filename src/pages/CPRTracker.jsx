@@ -69,6 +69,7 @@ export default function CPRTracker() {
   
   // Track dismissed alarms
   const [adrenalineDismissed, setAdrenalineDismissed] = useState(false);
+  const [adrenalineDismissedTime, setAdrenalineDismissedTime] = useState(null);
   const [amiodarone300Dismissed, setAmiodarone300Dismissed] = useState(false);
   const [amiodarone150Dismissed, setAmiodarone150Dismissed] = useState(false);
   const [lidocaine1mgDismissed, setLidocaine1mgDismissed] = useState(false);
@@ -290,6 +291,15 @@ export default function CPRTracker() {
       setLidocaine05mgDue(true);
     }
 
+    // Check if dismissed adrenaline should be alerted again (coach mode only)
+    if (soundEnabled && adrenalineDismissed && adrenalineDismissedTime !== null) {
+      const timeSinceDismissed = totalSeconds - adrenalineDismissedTime;
+      if (timeSinceDismissed >= adrenalineIntervalSeconds) {
+        setAdrenalineDismissed(false);
+        setAdrenalineDismissedTime(null);
+      }
+    }
+
     // Determine adrenaline status - use shouldShow directly, not the state variable
     let adrenalineStatus = 'pending';
     const isAdrenalineSnoozed = adrenalineSnoozedUntil !== null && totalSeconds < adrenalineSnoozedUntil;
@@ -488,6 +498,7 @@ export default function CPRTracker() {
     setSyncPressCount(0);
     setPulseCheckSynced(false);
     setAdrenalineDismissed(false);
+    setAdrenalineDismissedTime(null);
     setAmiodarone300Dismissed(false);
     setAmiodarone150Dismissed(false);
     setLidocaine1mgDismissed(false);
@@ -668,8 +679,10 @@ export default function CPRTracker() {
   const handleDismissAdrenaline = () => {
     playClick();
     const prevDismissed = adrenalineDismissed;
+    const prevDismissedTime = adrenalineDismissedTime;
     setAdrenalineDue(false);
     setAdrenalineDismissed(true);
+    setAdrenalineDismissedTime(totalSeconds);
     
     toast.info('Adrenaline alarm dismissed', {
       duration: 4000,
@@ -678,6 +691,7 @@ export default function CPRTracker() {
         label: 'Undo',
         onClick: () => {
           setAdrenalineDismissed(prevDismissed);
+          setAdrenalineDismissedTime(prevDismissedTime);
           setAdrenalineDue(true);
         }
       }
