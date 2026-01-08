@@ -393,20 +393,7 @@ export default function CPRTracker() {
     };
   }, [isRunning]);
 
-  // Thud sound effect for cycle transitions (110-120s and 0-10s)
-  useEffect(() => {
-    if (!isRunning) return;
-    
-    const shouldPlayThud = (cycleSeconds >= 110 && cycleSeconds <= 120) || (cycleSeconds >= 0 && cycleSeconds <= 10);
-    
-    if (shouldPlayThud) {
-      const thudInterval = setInterval(() => {
-        playThud();
-      }, 1000);
-      
-      return () => clearInterval(thudInterval);
-    }
-  }, [isRunning, cycleSeconds, playThud]);
+
 
   // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
@@ -426,9 +413,9 @@ export default function CPRTracker() {
       }
 
       // Set up interval for continuous beeping
-      // Medication alarms: 1600Hz at 600ms, Other alarms: 600Hz at 600ms
+      // Medication alarms: 1600Hz at 300ms, Other alarms: 600Hz at 300ms
       const frequency = shouldBeepMedication ? 1600 : 600;
-      const duration = 600;
+      const duration = 300;
 
       beepIntervalRef.current = setInterval(() => {
         playBeep(frequency, duration);
