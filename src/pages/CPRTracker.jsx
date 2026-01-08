@@ -157,6 +157,35 @@ export default function CPRTracker() {
     };
   }, []);
 
+  // Unlock audio on iOS/Android when coach mode is enabled
+  useEffect(() => {
+    if (soundEnabled && audioContextRef.current) {
+      // Resume audio context (required for iOS)
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+      
+      // Play and immediately pause all audio files at zero volume to unlock them (iOS requirement)
+      const unlockAudio = (audioRef) => {
+        if (audioRef.current) {
+          audioRef.current.volume = 0;
+          audioRef.current.play().then(() => {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current.volume = 1;
+          }).catch(() => {});
+        }
+      };
+      
+      unlockAudio(adrenalineAudioRef);
+      unlockAudio(shockableAudioRef);
+      unlockAudio(nonshockableAudioRef);
+      unlockAudio(pulsecheckAudioRef);
+      unlockAudio(amiodarone300AudioRef);
+      unlockAudio(amiodarone150AudioRef);
+    }
+  }, [soundEnabled]);
+
   // Function to play beep using Web Audio API
   const playBeep = useCallback((frequency = 800, duration = 100) => {
     if (!soundEnabled || !audioContextRef.current) return;
