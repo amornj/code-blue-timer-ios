@@ -1851,7 +1851,16 @@ export default function CPRTracker() {
           amiodaroneTotal={amiodaroneTotal}
           lidocaineCumulativeDose={lidocaineCumulativeDose}
           soundEnabled={soundEnabled}
-          onSoundToggle={setSoundEnabled}
+          onSoundToggle={(newMode) => {
+            setSoundEnabled(newMode);
+            // Prime audio for iOS when enabling coach mode
+            if (newMode && adrenalineAudioRef.current) {
+              adrenalineAudioRef.current.play().then(() => {
+                adrenalineAudioRef.current.pause();
+                adrenalineAudioRef.current.currentTime = 0;
+              }).catch(e => console.log('Audio priming:', e));
+            }
+          }}
           hasStarted={hasStarted}
           onSyncCycle={handleSyncCycle}
           adrenalineFrequency={adrenalineFrequency}
