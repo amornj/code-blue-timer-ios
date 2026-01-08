@@ -410,24 +410,30 @@ export default function CPRTracker() {
 
   // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
-    const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
+    const hasMedicationAlert = bannerEvents.some(e => e.status === 'active' && ['adrenaline', 'amiodarone', 'lidocaine'].includes(e.type));
+    const hasOtherAlert = bannerEvents.some(e => e.status === 'active' && ['pulse', 'compressor'].includes(e.type));
     const needsRhythmSelection = rhythmSelectionStage === 'unselected' && isRunning;
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const shockButtonActive = isShockable && !(soundEnabled && shockDeliveredThisCycle);
-    
-    const shouldBeep = hasActiveAlert || needsRhythmSelection || shockButtonActive;
-    
-    if (shouldBeep && isRunning && soundEnabled) {
+
+    const shouldBeepMedication = hasMedicationAlert;
+    const shouldBeepOther = hasOtherAlert || needsRhythmSelection || shockButtonActive;
+
+    if ((shouldBeepMedication || shouldBeepOther) && isRunning && soundEnabled) {
       // Clear any existing interval
       if (beepIntervalRef.current) {
         clearInterval(beepIntervalRef.current);
       }
 
       // Set up interval for continuous beeping
+      // Medication alarms: 1600Hz at 500ms, Other alarms: 600Hz at 600ms
+      const frequency = shouldBeepMedication ? 1600 : 600;
+      const duration = shouldBeepMedication ? 500 : 600;
+
       beepIntervalRef.current = setInterval(() => {
-        playBeep(1600, 500);
+        playBeep(frequency, duration);
       }, 600);
-      
+
       return () => {
         if (beepIntervalRef.current) {
           clearInterval(beepIntervalRef.current);
