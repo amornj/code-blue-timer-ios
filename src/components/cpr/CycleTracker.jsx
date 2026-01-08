@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted, onSyncCycle, adrenalineFrequency = 4, lastAdrenalineTime = null }) {
+export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockCount, adrenalineCount, amiodaroneTotal, lidocaineCumulativeDose = 0, soundEnabled, onSoundToggle, hasStarted, onSyncCycle, adrenalineFrequency = 4, lastAdrenalineTime = null, adrenalineAudioRef = null }) {
   const [showModeDialog, setShowModeDialog] = useState(false);
   const [pendingMode, setPendingMode] = useState(null);
   const [syncPressed, setSyncPressed] = useState(false);
@@ -77,20 +77,41 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
           </Button>
         </div>
 
-        {/* Mode Toggle - Top Right (Vertical) */}
-        <div className="absolute top-0 right-0 flex flex-col items-center gap-2">
-          <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${soundEnabled ? 'text-green-400' : 'text-slate-500'}`}>
-            COACH
-          </span>
-          <Switch
-            checked={soundEnabled}
-            onCheckedChange={handleModeToggle}
+        {/* Mode Toggle and Voice Alert - Top Right (Vertical) */}
+        <div className="absolute top-0 right-0 flex flex-row items-start gap-2">
+          {/* Voice Alert Button */}
+          <Button
+            onClick={() => {
+              if (adrenalineAudioRef?.current) {
+                adrenalineAudioRef.current.play().then(() => {
+                  setTimeout(() => {
+                    adrenalineAudioRef.current.pause();
+                    adrenalineAudioRef.current.currentTime = 0;
+                  }, 100);
+                }).catch(e => console.log('Audio unlock failed:', e));
+              }
+            }}
             disabled={!hasStarted}
-            className="data-[state=checked]:bg-green-600 rotate-90 transition-all duration-300"
-          />
-          <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${!soundEnabled ? 'text-green-400' : 'text-slate-500'}`}>
-            TRACK
-          </span>
+            className="h-7 px-2 rounded-lg text-[10px] font-medium bg-blue-600 hover:bg-blue-700 text-white border-0"
+          >
+            🔊
+          </Button>
+
+          {/* Coach/Track Toggle */}
+          <div className="flex flex-col items-center gap-2">
+            <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${soundEnabled ? 'text-green-400' : 'text-slate-500'}`}>
+              COACH
+            </span>
+            <Switch
+              checked={soundEnabled}
+              onCheckedChange={handleModeToggle}
+              disabled={!hasStarted}
+              className="data-[state=checked]:bg-green-600 rotate-90 transition-all duration-300"
+            />
+            <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${!soundEnabled ? 'text-green-400' : 'text-slate-500'}`}>
+              TRACK
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center justify-center gap-2 mb-2">

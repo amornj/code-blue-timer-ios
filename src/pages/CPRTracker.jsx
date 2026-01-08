@@ -1865,6 +1865,7 @@ export default function CPRTracker() {
           onSyncCycle={handleSyncCycle}
           adrenalineFrequency={adrenalineFrequency}
           lastAdrenalineTime={lastAdrenalineTime}
+          adrenalineAudioRef={adrenalineAudioRef}
         />
 
         {/* Rhythm Selector */}
