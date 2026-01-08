@@ -429,7 +429,7 @@ export default function CPRTracker() {
       // Set up interval for continuous beeping
       beepIntervalRef.current = setInterval(() => {
         playBeep(800, 100);
-      }, 2000);
+      }, 600);
       
       return () => {
         if (beepIntervalRef.current) {
