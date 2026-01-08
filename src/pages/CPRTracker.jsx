@@ -112,12 +112,25 @@ export default function CPRTracker() {
   const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
   const adrenalineAudioRef = useRef(null);
+  const shockableAudioRef = useRef(null);
+  const nonshockableAudioRef = useRef(null);
+  const pulsecheckAudioRef = useRef(null);
+  const amiodarone300AudioRef = useRef(null);
+  const amiodarone150AudioRef = useRef(null);
   const [adrenalineAlertPlayed, setAdrenalineAlertPlayed] = useState(false);
+  const [pulsecheckAlertPlayed, setPulsecheckAlertPlayed] = useState(false);
+  const [amiodarone300AlertPlayed, setAmiodarone300AlertPlayed] = useState(false);
+  const [amiodarone150AlertPlayed, setAmiodarone150AlertPlayed] = useState(false);
 
   // Initialize Web Audio API and MP3 audio
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
     adrenalineAudioRef.current = new Audio('/src/adrenaline.mp3');
+    shockableAudioRef.current = new Audio('/src/shockable.mp3');
+    nonshockableAudioRef.current = new Audio('/src/nonshockable.mp3');
+    pulsecheckAudioRef.current = new Audio('/src/pulsecheck.mp3');
+    amiodarone300AudioRef.current = new Audio('/src/amiodarone300.mp3');
+    amiodarone150AudioRef.current = new Audio('/src/amiodarone150.mp3');
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -421,10 +434,49 @@ export default function CPRTracker() {
       adrenalineAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
       setAdrenalineAlertPlayed(true);
     } else if (!isAdrenalineActive && adrenalineAlertPlayed) {
-      // Reset flag when alert is no longer active
       setAdrenalineAlertPlayed(false);
     }
   }, [bannerEvents, soundEnabled, adrenalineAlertPlayed]);
+
+  // Play pulse check MP3 alert once per alert
+  useEffect(() => {
+    const pulsecheckAlert = bannerEvents.find(e => e.type === 'pulse');
+    const isPulsecheckActive = pulsecheckAlert?.status === 'active';
+    
+    if (isPulsecheckActive && !pulsecheckAlertPlayed && soundEnabled && pulsecheckAudioRef.current) {
+      pulsecheckAudioRef.current.currentTime = 0;
+      pulsecheckAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      setPulsecheckAlertPlayed(true);
+    } else if (!isPulsecheckActive && pulsecheckAlertPlayed) {
+      setPulsecheckAlertPlayed(false);
+    }
+  }, [bannerEvents, soundEnabled, pulsecheckAlertPlayed]);
+
+  // Play amiodarone MP3 alerts once per alert
+  useEffect(() => {
+    const amiodaroneAlert = bannerEvents.find(e => e.type === 'amiodarone');
+    const isAmiodaroneActive = amiodaroneAlert?.status === 'active';
+    
+    if (isAmiodaroneActive && soundEnabled) {
+      // Determine which dose based on current amiodarone total
+      if (amiodaroneTotal < 300 && !amiodarone300AlertPlayed && amiodarone300AudioRef.current) {
+        amiodarone300AudioRef.current.currentTime = 0;
+        amiodarone300AudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        setAmiodarone300AlertPlayed(true);
+      } else if (amiodaroneTotal >= 300 && amiodaroneTotal < 450 && !amiodarone150AlertPlayed && amiodarone150AudioRef.current) {
+        amiodarone150AudioRef.current.currentTime = 0;
+        amiodarone150AudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        setAmiodarone150AlertPlayed(true);
+      }
+    } else if (!isAmiodaroneActive) {
+      if (amiodaroneTotal >= 300) {
+        setAmiodarone300AlertPlayed(false);
+      }
+      if (amiodaroneTotal >= 450 || amiodaroneTotal < 300) {
+        setAmiodarone150AlertPlayed(false);
+      }
+    }
+  }, [bannerEvents, soundEnabled, amiodaroneTotal, amiodarone300AlertPlayed, amiodarone150AlertPlayed]);
 
   // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
@@ -1205,6 +1257,18 @@ export default function CPRTracker() {
     const prevStage = rhythmSelectionStage;
     const prevInitialRhythm = initialRhythm;
     const prevShockCountAtChange = shockCountAtRhythmChange;
+    
+    // Play rhythm selection sound
+    if (soundEnabled) {
+      const isShockable = rhythm === 'VF' || rhythm === 'pVT';
+      if (isShockable && shockableAudioRef.current) {
+        shockableAudioRef.current.currentTime = 0;
+        shockableAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      } else if (!isShockable && nonshockableAudioRef.current) {
+        nonshockableAudioRef.current.currentTime = 0;
+        nonshockableAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      }
+    }
     
     setCurrentRhythm(rhythm);
     setRhythmSelectionStage('selected'); // Lock rhythm selection
