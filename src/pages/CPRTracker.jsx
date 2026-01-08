@@ -479,7 +479,9 @@ export default function CPRTracker() {
     
     if (isAdrenalineActive && !adrenalineAlertPlayed && soundEnabled && adrenalineAudioRef.current) {
       adrenalineAudioRef.current.currentTime = 0;
-      adrenalineAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      adrenalineAudioRef.current.play()
+        .then(() => toast.success('🔊 Adrenaline alert'))
+        .catch(err => toast.error('Failed to play adrenaline sound'));
       setAdrenalineAlertPlayed(true);
     } else if (!isAdrenalineActive && adrenalineAlertPlayed) {
       setAdrenalineAlertPlayed(false);
@@ -493,7 +495,9 @@ export default function CPRTracker() {
     
     if (isPulsecheckActive && !pulsecheckAlertPlayed && soundEnabled && pulsecheckAudioRef.current) {
       pulsecheckAudioRef.current.currentTime = 0;
-      pulsecheckAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      pulsecheckAudioRef.current.play()
+        .then(() => toast.success('🔊 Pulse check alert'))
+        .catch(err => toast.error('Failed to play pulse check sound'));
       setPulsecheckAlertPlayed(true);
     } else if (!isPulsecheckActive && pulsecheckAlertPlayed) {
       setPulsecheckAlertPlayed(false);
@@ -509,11 +513,15 @@ export default function CPRTracker() {
       // Determine which dose based on current amiodarone total
       if (amiodaroneTotal < 300 && !amiodarone300AlertPlayed && amiodarone300AudioRef.current) {
         amiodarone300AudioRef.current.currentTime = 0;
-        amiodarone300AudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        amiodarone300AudioRef.current.play()
+          .then(() => toast.success('🔊 Amiodarone 300mg alert'))
+          .catch(err => toast.error('Failed to play amiodarone 300mg sound'));
         setAmiodarone300AlertPlayed(true);
       } else if (amiodaroneTotal >= 300 && amiodaroneTotal < 450 && !amiodarone150AlertPlayed && amiodarone150AudioRef.current) {
         amiodarone150AudioRef.current.currentTime = 0;
-        amiodarone150AudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        amiodarone150AudioRef.current.play()
+          .then(() => toast.success('🔊 Amiodarone 150mg alert'))
+          .catch(err => toast.error('Failed to play amiodarone 150mg sound'));
         setAmiodarone150AlertPlayed(true);
       }
     } else if (!isAmiodaroneActive) {
@@ -1311,10 +1319,14 @@ export default function CPRTracker() {
       const isShockable = rhythm === 'VF' || rhythm === 'pVT';
       if (isShockable && shockableAudioRef.current) {
         shockableAudioRef.current.currentTime = 0;
-        shockableAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        shockableAudioRef.current.play()
+          .then(() => toast.success('🔊 Shockable rhythm alert'))
+          .catch(err => toast.error('Failed to play shockable sound'));
       } else if (!isShockable && nonshockableAudioRef.current) {
         nonshockableAudioRef.current.currentTime = 0;
-        nonshockableAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        nonshockableAudioRef.current.play()
+          .then(() => toast.success('🔊 Non-shockable rhythm alert'))
+          .catch(err => toast.error('Failed to play non-shockable sound'));
       }
     }
     
