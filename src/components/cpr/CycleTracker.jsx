@@ -27,11 +27,14 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
   const adrenalineProgress = Math.min((timeElapsed / adrenalineIntervalSeconds) * 100, 100);
   const isAdrenalineOverdue = timeElapsed > adrenalineIntervalSeconds;
 
-  const handleModeToggle = () => {
+  const handleModeToggle = (e) => {
+    // Ensure this is a user gesture for iOS audio
+    e?.preventDefault();
+
     const prevMode = soundEnabled;
     const newMode = !soundEnabled;
     onSoundToggle(newMode);
-    
+
     toast.success(`Switched to ${newMode ? 'COACH' : 'TRACK'} mode`, {
       duration: 4000,
       position: 'bottom-center',
