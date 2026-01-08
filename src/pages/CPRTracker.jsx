@@ -1258,18 +1258,6 @@ export default function CPRTracker() {
     const prevInitialRhythm = initialRhythm;
     const prevShockCountAtChange = shockCountAtRhythmChange;
     
-    // Play rhythm selection sound
-    if (soundEnabled) {
-      const isShockable = rhythm === 'VF' || rhythm === 'pVT';
-      if (isShockable && shockableAudioRef.current) {
-        shockableAudioRef.current.currentTime = 0;
-        shockableAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
-      } else if (!isShockable && nonshockableAudioRef.current) {
-        nonshockableAudioRef.current.currentTime = 0;
-        nonshockableAudioRef.current.play().catch(err => console.log('Audio play failed:', err));
-      }
-    }
-    
     setCurrentRhythm(rhythm);
     setRhythmSelectionStage('selected'); // Lock rhythm selection
     
@@ -1935,6 +1923,8 @@ export default function CPRTracker() {
           isRunning={isRunning}
           disabled={!hasStarted}
           soundEnabled={soundEnabled}
+          shockableAudioRef={shockableAudioRef}
+          nonshockableAudioRef={nonshockableAudioRef}
         />
 
         {/* Event Banners */}
