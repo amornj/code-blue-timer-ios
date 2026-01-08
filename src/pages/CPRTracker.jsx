@@ -412,6 +412,10 @@ export default function CPRTracker() {
   useEffect(() => {
     const hasActiveAlert = bannerEvents.some(e => e.status === 'active');
     const hasAdrenalineAlert = bannerEvents.some(e => e.type === 'adrenaline' && e.status === 'active');
+    const hasAmiodaroneAlert = bannerEvents.some(e => e.type === 'amiodarone' && e.status === 'active');
+    const hasLidocaineAlert = bannerEvents.some(e => e.type === 'lidocaine' && e.status === 'active');
+    const hasPulseCheckAlert = bannerEvents.some(e => e.type === 'pulse' && e.status === 'active');
+    const hasCompressorAlert = bannerEvents.some(e => e.type === 'compressor' && e.status === 'active');
     const needsRhythmSelection = rhythmSelectionStage === 'unselected' && isRunning;
     const isShockable = currentRhythm === 'VF' || currentRhythm === 'pVT';
     const shockButtonActive = isShockable && !(soundEnabled && shockDeliveredThisCycle);
@@ -424,9 +428,17 @@ export default function CPRTracker() {
         clearInterval(beepIntervalRef.current);
       }
       
-      // Use higher pitch and faster rate for adrenaline alerts
-      const frequency = hasAdrenalineAlert ? 1600 : 800;
-      const interval = hasAdrenalineAlert ? 500 : 2000;
+      // Set frequency and interval based on alert type
+      let frequency = 800;
+      let interval = 2000;
+      
+      if (hasAdrenalineAlert || hasAmiodaroneAlert || hasLidocaineAlert) {
+        frequency = 1600;
+        interval = 500;
+      } else if (hasPulseCheckAlert || hasCompressorAlert) {
+        frequency = 600;
+        interval = 2000;
+      }
       
       // Play beep immediately
       playBeep(frequency, 100);
