@@ -165,7 +165,7 @@ export default function CycleTracker({ cycle, cycleSeconds, totalSeconds, shockC
         <div className="bg-slate-700/50 rounded-lg p-2 text-center">
           <Syringe className="w-4 h-4 mx-auto mb-1 text-teal-400" />
           <div className="text-xl font-bold text-white">{lidocaineCumulativeDose}</div>
-          <div className="text-xs text-slate-400">Lidocaine</div>
+          <div className="text-xs text-slate-400">Xylocaine</div>
         </div>
         </div>
 
