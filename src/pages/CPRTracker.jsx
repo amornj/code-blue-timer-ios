@@ -54,6 +54,7 @@ export default function CPRTracker() {
   const [shockDeliveredThisCycle, setShockDeliveredThisCycle] = useState(false);
   const [adrenalineCount, setAdrenalineCount] = useState(0);
   const [amiodaroneTotal, setAmiodaroneTotal] = useState(0);
+  const [amiodaroneFirstDoseShockCount, setAmiodaroneFirstDoseShockCount] = useState(null);
   const [compressorChanges, setCompressorChanges] = useState(0);
   const [pulseChecks, setPulseChecks] = useState(0);
   
@@ -242,7 +243,11 @@ export default function CPRTracker() {
 
     // Check amiodarone timing - only for shockable rhythms
     const shouldShowAmiodarone300 = isShockable && shockCount >= 3 && amiodaroneTotal < 300;
-    const shouldShowAmiodarone150 = isShockable && shockCount >= 5 && amiodaroneTotal >= 300 && amiodaroneTotal < 450;
+    // Second dose: 2 shocks after first dose was given (if delayed), otherwise default to shock 5
+    const amiodarone150ShockThreshold = amiodaroneFirstDoseShockCount !== null 
+      ? amiodaroneFirstDoseShockCount + 2 
+      : 5;
+    const shouldShowAmiodarone150 = isShockable && shockCount >= amiodarone150ShockThreshold && amiodaroneTotal >= 300 && amiodaroneTotal < 450;
 
     // Lidocaine (Xylocaine) rules - Coach mode: 6 minutes after amiodarone 450mg, then every 6 minutes
     // Track mode: based on dose number and max cumulative dose of 3 mg/kg
@@ -497,6 +502,7 @@ export default function CPRTracker() {
     setCyclesWithShocks(new Set());
     setAdrenalineCount(0);
     setAmiodaroneTotal(0);
+    setAmiodaroneFirstDoseShockCount(null);
     setCompressorChanges(0);
     setPulseChecks(0);
     setEvents([]);
@@ -775,7 +781,13 @@ export default function CPRTracker() {
 
     playClick();
     const newTotal = amiodaroneTotal + amiodaroneDose;
+    const prevFirstDoseShockCount = amiodaroneFirstDoseShockCount;
     setAmiodaroneTotal(newTotal);
+
+    // Track shock count when first dose (300mg) is given for second dose timing
+    if (amiodaroneDose === 300 && amiodaroneFirstDoseShockCount === null) {
+      setAmiodaroneFirstDoseShockCount(shockCount);
+    }
 
     // Track when amiodarone reaches 450mg for Xylocaine timing
     if (newTotal >= 450 && amiodarone450ReachedTime === null) {
@@ -803,6 +815,9 @@ export default function CPRTracker() {
         label: 'Undo',
         onClick: () => {
           setAmiodaroneTotal(prev => prev - amiodaroneDose);
+          if (amiodaroneDose === 300) {
+            setAmiodaroneFirstDoseShockCount(prevFirstDoseShockCount);
+          }
           setEvents(prev => prev.slice(0, -1));
         }
       }
