@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Play, Square, AlertTriangle, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toast, Toaster } from 'sonner';
@@ -18,6 +21,13 @@ import ShockButton from '@/components/cpr/ShockButton';
 import EventLog from '@/components/cpr/EventLog';
 import CommonMedications from '@/components/cpr/CommonMedications';
 import CommonProcedures from '@/components/cpr/CommonProcedures';
+
+// Import audio files
+import adrenalineAudio from '@/adrenaline.mp3';
+import amiodarone300Audio from '@/amiodarone300.mp3';
+import amiodarone150Audio from '@/amiodarone150.mp3';
+import xylocaineAudio from '@/xylocaine.mp3';
+import pulsecheckAudio from '@/pulsecheck.mp3';
 
 const CYCLE_DURATION = 120; // 2 minutes in seconds
 
@@ -115,16 +125,132 @@ export default function CPRTracker() {
   // Audio context and refs
   const audioContextRef = useRef(null);
   const beepIntervalRef = useRef(null);
+  
+  // Audio refs for medication alerts
+  const adrenalineAudioRef = useRef(null);
+  const amiodarone300AudioRef = useRef(null);
+  const amiodarone150AudioRef = useRef(null);
+  const xylocaineAudioRef = useRef(null);
+  const pulsecheckAudioRef = useRef(null);
+  
+  // Audio queue system
+  const audioQueueRef = useRef([]);
+  const isPlayingAudioRef = useRef(false);
+  const lastAudioPlayTimeRef = useRef(0);
+  // Track which alerts have played audio (all alerts play once per activation)
+  const playedAudioRef = useRef({
+    adrenaline: false,
+    amiodarone300: false,
+    amiodarone150: false,
+    xylocaine: false,
+    pulsecheck: false
+  });
+  // Track previous dismissed states to detect when alerts are reactivated
+  const prevDismissedRef = useRef({
+    adrenaline: false,
+    amiodarone300: false,
+    amiodarone150: false,
+    xylocaine: false
+  });
 
-  // Initialize Web Audio API
+  // Initialize Web Audio API and load audio files
   useEffect(() => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Load audio files using imported URLs
+    adrenalineAudioRef.current = new Audio(adrenalineAudio);
+    amiodarone300AudioRef.current = new Audio(amiodarone300Audio);
+    amiodarone150AudioRef.current = new Audio(amiodarone150Audio);
+    xylocaineAudioRef.current = new Audio(xylocaineAudio);
+    pulsecheckAudioRef.current = new Audio(pulsecheckAudio);
+    
+    // Preload audio files
+    const audioRefs = [adrenalineAudioRef, amiodarone300AudioRef, amiodarone150AudioRef, xylocaineAudioRef, pulsecheckAudioRef];
+    audioRefs.forEach(audioRef => {
+      if (audioRef.current) {
+        audioRef.current.preload = 'auto';
+        audioRef.current.volume = 1.0;
+      }
+    });
+    
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
     };
   }, []);
+
+  // Function to play audio from queue with 2 second delay
+  const playAudioFromQueue = useCallback(() => {
+    if (isPlayingAudioRef.current || audioQueueRef.current.length === 0) {
+      return;
+    }
+
+    const now = Date.now();
+    const timeSinceLastAudio = now - lastAudioPlayTimeRef.current;
+    const delayBetweenAudio = 2000; // 2 seconds
+
+    if (timeSinceLastAudio < delayBetweenAudio && lastAudioPlayTimeRef.current > 0) {
+      // Wait until 2 seconds have passed since last audio (skip check on first audio)
+      const waitTime = delayBetweenAudio - timeSinceLastAudio;
+      setTimeout(() => {
+        playAudioFromQueue();
+      }, waitTime);
+      return;
+    }
+
+    // Play the next audio in queue
+    const audioFile = audioQueueRef.current.shift();
+    const audioRef = audioFile === 'adrenaline' ? adrenalineAudioRef.current :
+                     audioFile === 'amiodarone300' ? amiodarone300AudioRef.current :
+                     audioFile === 'amiodarone150' ? amiodarone150AudioRef.current :
+                     audioFile === 'xylocaine' ? xylocaineAudioRef.current :
+                     audioFile === 'pulsecheck' ? pulsecheckAudioRef.current : null;
+
+    if (audioRef) {
+      isPlayingAudioRef.current = true;
+      lastAudioPlayTimeRef.current = Date.now();
+      
+      // Reset audio to start
+      audioRef.currentTime = 0;
+      
+      // Handle audio end
+      const handleEnded = () => {
+        isPlayingAudioRef.current = false;
+        audioRef.removeEventListener('ended', handleEnded);
+        // Play next audio in queue if any
+        if (audioQueueRef.current.length > 0) {
+          playAudioFromQueue();
+        }
+      };
+      
+      audioRef.addEventListener('ended', handleEnded);
+      
+      audioRef.play().catch((error) => {
+        console.error('Error playing audio:', error);
+        isPlayingAudioRef.current = false;
+        audioRef.removeEventListener('ended', handleEnded);
+        // Continue with next audio in queue
+        if (audioQueueRef.current.length > 0) {
+          playAudioFromQueue();
+        }
+      });
+    } else {
+      isPlayingAudioRef.current = false;
+      // Continue with next audio in queue
+      if (audioQueueRef.current.length > 0) {
+        playAudioFromQueue();
+      }
+    }
+  }, []);
+
+  // Function to queue audio playback
+  const queueAudio = useCallback((audioFile) => {
+    if (!soundEnabled || !isRunning) return;
+    
+    audioQueueRef.current.push(audioFile);
+    playAudioFromQueue();
+  }, [soundEnabled, isRunning, playAudioFromQueue]);
 
   // Function to play beep using Web Audio API
   const playBeep = useCallback((frequency = 800, duration = 100) => {
@@ -432,6 +558,111 @@ export default function CPRTracker() {
 
 
 
+  // Play medication alert audio files when alerts become active
+  useEffect(() => {
+    if (!soundEnabled || !isRunning) return;
+
+    // Check for adrenaline alert - play ONCE per activation
+    if (adrenalineDue && !adrenalineDismissed && !playedAudioRef.current.adrenaline) {
+      const isAdrenalineSnoozed = adrenalineSnoozedUntil !== null && totalSeconds < adrenalineSnoozedUntil;
+      if (!isAdrenalineSnoozed) {
+        playedAudioRef.current.adrenaline = true;
+        queueAudio('adrenaline');
+      }
+    }
+
+    // Check for amiodarone 300mg alert - play ONCE per activation
+    if (amiodarone300Due && !amiodarone300Dismissed && !playedAudioRef.current.amiodarone300) {
+      const is300Snoozed = amiodarone300SnoozedUntil !== null && totalSeconds < amiodarone300SnoozedUntil;
+      if (!is300Snoozed) {
+        playedAudioRef.current.amiodarone300 = true;
+        queueAudio('amiodarone300');
+      }
+    }
+
+    // Check for amiodarone 150mg alert - play ONCE per activation
+    if (amiodarone150Due && !amiodarone150Dismissed && !playedAudioRef.current.amiodarone150) {
+      const is150Snoozed = amiodarone150SnoozedUntil !== null && totalSeconds < amiodarone150SnoozedUntil;
+      if (!is150Snoozed) {
+        playedAudioRef.current.amiodarone150 = true;
+        queueAudio('amiodarone150');
+      }
+    }
+
+    // Check for xylocaine/lidocaine alert - play ONCE per activation
+    if ((lidocaine1mgDue || lidocaine05mgDue) && !lidocaine1mgDismissed && !lidocaine05mgDismissed && !playedAudioRef.current.xylocaine) {
+      const is1mgSnoozed = lidocaine1mgSnoozedUntil !== null && totalSeconds < lidocaine1mgSnoozedUntil;
+      const is05mgSnoozed = lidocaine05mgSnoozedUntil !== null && totalSeconds < lidocaine05mgSnoozedUntil;
+      if (!is1mgSnoozed && !is05mgSnoozed) {
+        playedAudioRef.current.xylocaine = true;
+        queueAudio('xylocaine');
+      }
+    }
+
+    // Reset audio flags when snooze expires (so audio can play again after snooze)
+    if (adrenalineSnoozedUntil !== null && totalSeconds >= adrenalineSnoozedUntil) {
+      playedAudioRef.current.adrenaline = false;
+    }
+    if (amiodarone300SnoozedUntil !== null && totalSeconds >= amiodarone300SnoozedUntil) {
+      playedAudioRef.current.amiodarone300 = false;
+    }
+    if (amiodarone150SnoozedUntil !== null && totalSeconds >= amiodarone150SnoozedUntil) {
+      playedAudioRef.current.amiodarone150 = false;
+    }
+    if ((lidocaine1mgSnoozedUntil !== null && totalSeconds >= lidocaine1mgSnoozedUntil) ||
+        (lidocaine05mgSnoozedUntil !== null && totalSeconds >= lidocaine05mgSnoozedUntil)) {
+      playedAudioRef.current.xylocaine = false;
+    }
+
+    // Reset audio flags when alerts are reactivated after dismissal
+    // Detect when dismissed flag changes from true to false
+    if (prevDismissedRef.current.adrenaline && !adrenalineDismissed) {
+      playedAudioRef.current.adrenaline = false;
+    }
+    if (prevDismissedRef.current.amiodarone300 && !amiodarone300Dismissed) {
+      playedAudioRef.current.amiodarone300 = false;
+    }
+    if (prevDismissedRef.current.amiodarone150 && !amiodarone150Dismissed) {
+      playedAudioRef.current.amiodarone150 = false;
+    }
+    const xylocaineWasDismissed = prevDismissedRef.current.xylocaine;
+    const xylocaineIsDismissed = lidocaine1mgDismissed && lidocaine05mgDismissed;
+    if (xylocaineWasDismissed && !xylocaineIsDismissed) {
+      playedAudioRef.current.xylocaine = false;
+    }
+
+    // Update previous dismissed states
+    prevDismissedRef.current.adrenaline = adrenalineDismissed;
+    prevDismissedRef.current.amiodarone300 = amiodarone300Dismissed;
+    prevDismissedRef.current.amiodarone150 = amiodarone150Dismissed;
+    prevDismissedRef.current.xylocaine = xylocaineIsDismissed;
+  }, [adrenalineDue, amiodarone300Due, amiodarone150Due, lidocaine1mgDue, lidocaine05mgDue, 
+      adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, 
+      lidocaine1mgDismissed, lidocaine05mgDismissed,
+      adrenalineSnoozedUntil, amiodarone300SnoozedUntil, amiodarone150SnoozedUntil,
+      lidocaine1mgSnoozedUntil, lidocaine05mgSnoozedUntil,
+      soundEnabled, isRunning, totalSeconds, queueAudio]);
+
+  // Play pulse check alert audio when pulse check alert becomes active
+  useEffect(() => {
+    if (!soundEnabled || !isRunning) return;
+
+    // Pulse check alert is active when cycleComplete && pulseChecks < cycle
+    const cycleComplete = cycleSeconds >= CYCLE_DURATION - 5;
+    const pulseCheckActive = cycleComplete && pulseChecks < currentCycle;
+
+    // Play pulse check audio ONCE per activation
+    if (pulseCheckActive && !playedAudioRef.current.pulsecheck) {
+      playedAudioRef.current.pulsecheck = true;
+      queueAudio('pulsecheck');
+    }
+
+    // Reset pulse check audio flag when alert becomes inactive (cycle advances or pulse check is performed)
+    if (!pulseCheckActive && playedAudioRef.current.pulsecheck) {
+      playedAudioRef.current.pulsecheck = false;
+    }
+  }, [cycleSeconds, currentCycle, pulseChecks, soundEnabled, isRunning, queueAudio]);
+
   // Beep sound effect for active alerts, rhythm selection, and shock button
   useEffect(() => {
     const hasMedicationAlert = bannerEvents.some(e => e.status === 'active' && ['adrenaline', 'amiodarone', 'lidocaine'].includes(e.type));
@@ -666,6 +897,8 @@ export default function CPRTracker() {
     setAdrenalineDue(false);
     setAdrenalineDismissed(false); // Clear dismissed flag when given
     setAdrenalineSnoozedUntil(null); // Clear snooze when given
+    // Reset audio tracking so it can play again for next activation
+    playedAudioRef.current.adrenaline = false;
 
     // Clear crossover tracking once adrenaline is given in new shockable rhythm
     if (shockCountAtRhythmChange !== null) {
@@ -693,6 +926,8 @@ export default function CPRTracker() {
     const prevSnoozedUntil = adrenalineSnoozedUntil;
     const snoozeUntil = totalSeconds + 90; // 90 seconds from now
     setAdrenalineSnoozedUntil(snoozeUntil);
+    // Reset audio tracking so it can play again after snooze expires
+    playedAudioRef.current.adrenaline = false;
 
     toast.info('Adrenaline alarm snoozed for 90 seconds', {
       duration: 4000,
@@ -798,10 +1033,14 @@ export default function CPRTracker() {
       setAmiodarone300Due(false);
       setAmiodarone300Dismissed(false);
       setAmiodarone300SnoozedUntil(null);
+      // Reset audio tracking so it can play again for next activation
+      playedAudioRef.current.amiodarone300 = false;
     } else if (amiodaroneDose === 150) {
       setAmiodarone150Due(false);
       setAmiodarone150Dismissed(false);
       setAmiodarone150SnoozedUntil(null);
+      // Reset audio tracking so it can play again for next activation
+      playedAudioRef.current.amiodarone150 = false;
     }
 
     addEvent('amiodarone', `Amiodarone ${amiodaroneDose}mg administered`, { dose: amiodaroneDose });
@@ -836,6 +1075,8 @@ export default function CPRTracker() {
       const prevSnoozedUntil = amiodarone300SnoozedUntil;
       const snoozeUntil = totalSeconds + 90;
       setAmiodarone300SnoozedUntil(snoozeUntil);
+      // Reset audio tracking so it can play again after snooze expires
+      playedAudioRef.current.amiodarone300 = false;
 
       toast.info('Amiodarone 300mg alarm snoozed for 90 seconds', {
         duration: 4000,
@@ -851,6 +1092,8 @@ export default function CPRTracker() {
       const prevSnoozedUntil = amiodarone150SnoozedUntil;
       const snoozeUntil = totalSeconds + 90;
       setAmiodarone150SnoozedUntil(snoozeUntil);
+      // Reset audio tracking so it can play again after snooze expires
+      playedAudioRef.current.amiodarone150 = false;
 
       toast.info('Amiodarone 150mg alarm snoozed for 90 seconds', {
         duration: 4000,
@@ -980,10 +1223,14 @@ export default function CPRTracker() {
       setLidocaine1mgDue(false);
       setLidocaine1mgDismissed(false);
       setLidocaine1mgSnoozedUntil(null);
+      // Reset audio tracking so it can play again for next activation
+      playedAudioRef.current.xylocaine = false;
     } else {
       setLidocaine05mgDue(false);
       setLidocaine05mgDismissed(false);
       setLidocaine05mgSnoozedUntil(null);
+      // Reset audio tracking so it can play again for next activation
+      playedAudioRef.current.xylocaine = false;
     }
 
     addEvent('lidocaine', `Xylocaine ${lidocaineDosePerKg} mg/kg (${totalDose}mg for ${patientWeight}kg) administered (cumulative: ${lidocaineCumulativeDose + lidocaineDosePerKg} mg/kg)`, { dose: lidocaineDosePerKg });
@@ -1041,6 +1288,8 @@ export default function CPRTracker() {
       const prevSnoozedUntil = lidocaine1mgSnoozedUntil;
       const snoozeUntil = totalSeconds + 90;
       setLidocaine1mgSnoozedUntil(snoozeUntil);
+      // Reset audio tracking so it can play again after snooze expires
+      playedAudioRef.current.xylocaine = false;
 
       toast.info('Xylocaine 1st dose alarm snoozed for 90 seconds', {
         duration: 4000,
@@ -1056,6 +1305,8 @@ export default function CPRTracker() {
       const prevSnoozedUntil = lidocaine05mgSnoozedUntil;
       const snoozeUntil = totalSeconds + 90;
       setLidocaine05mgSnoozedUntil(snoozeUntil);
+      // Reset audio tracking so it can play again after snooze expires
+      playedAudioRef.current.xylocaine = false;
 
       toast.info('Xylocaine subsequent dose alarm snoozed for 90 seconds', {
         duration: 4000,
@@ -1357,6 +1608,9 @@ export default function CPRTracker() {
     setSessionEnded(true);
     setFinalOutcome(outcome);
     
+    // Add session end event to the events log
+    addEvent('end', `CPR Session Ended (Outcome: ${outcome})`, { outcome });
+    
     const sessionData = {
       start_time: startTime,
       end_time: new Date().toISOString(),
@@ -1416,7 +1670,7 @@ export default function CPRTracker() {
     setNotes('');
   };
 
-  const exportGuestPDF = () => {
+  const exportGuestPDF = async () => {
     const formatTime = (seconds) => {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
@@ -1451,14 +1705,32 @@ export default function CPRTracker() {
     doc.text('CPR Session Report', 15, yPos);
     yPos += 12;
 
-    // Summary boxes
+    // Summary boxes - format date properly
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
-    doc.text(`Start: ${startTime || 'N/A'}`, 15, yPos);
+    const formattedStartTime = startTime ? (() => {
+      try {
+        const date = new Date(startTime);
+        if (!isNaN(date.getTime())) {
+          const formatted = date.toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          // Format as "Jan 5, 2026 00:10" (keep comma, replace space between date and time)
+          return formatted.replace(/(\d{4}) (\d{2}:\d{2})/, '$1 $2');
+        }
+      } catch (e) {}
+      return startTime;
+    })() : 'N/A';
+    doc.text(`Start: ${formattedStartTime}`, 15, yPos);
     doc.text(`Duration: ${formatTime(totalSeconds)}`, 70, yPos);
     doc.text(`Cycles: ${currentCycle}`, 125, yPos);
     yPos += 6;
-    doc.text(`${sessionEnded && finalOutcome ? 'Outcome' : 'Rhythm'}: ${outcomeText}`, 15, yPos);
+    doc.text(`Outcome: ${outcomeText}`, 15, yPos);
     yPos += 10;
 
     // Warning if ongoing
@@ -1484,13 +1756,26 @@ export default function CPRTracker() {
 
       switch (e.type) {
         case 'rhythm':
-          description = e.message;
+          // Format as "Rhythm Check: VF" instead of "Rhythm identified: VF"
+          const rhythmMatch = e.message.match(/Rhythm identified: (\w+)/);
+          if (rhythmMatch) {
+            description = `Rhythm Check: ${rhythmMatch[1]}`;
+          } else {
+            description = e.message.replace('Rhythm identified: ', 'Rhythm Check: ');
+          }
           break;
         case 'shock':
           description = `Shock Delivered @ ${e.energy}J (Rhythm: ${e.rhythmBefore})`;
           break;
         case 'compressor':
-          description = e.message;
+          // Simplify compressor messages to "Compressor Changed"
+          if (e.message.includes('Compressor changed') || e.message.includes('compressor changed')) {
+            description = 'Compressor Changed';
+          } else if (e.message.includes('LUCAS')) {
+            description = e.message;
+          } else {
+            description = 'Compressor Changed';
+          }
           break;
         case 'pulse':
           description = 'Pulse Check Performed';
@@ -1511,12 +1796,16 @@ export default function CPRTracker() {
           description = e.procedure || 'Procedure Performed';
           break;
         case 'cycle':
-          description = e.message;
+          // Skip cycle start events in the report
+          return null;
+        case 'end':
+          description = `CPR Session Ended (Outcome: ${formatOutcome(e.outcome)})`;
           break;
         default:
           description = e.message;
       }
 
+      if (description === null) return null;
       return [e.timestamp, description, `Cycle ${e.cycle || '-'}`];
     };
 
@@ -1525,18 +1814,40 @@ export default function CPRTracker() {
       doc.text('Event Log', 15, yPos);
       yPos += 5;
 
-      const filteredEvents = events.filter(e => e.type !== 'start' && !e.message?.includes('Time adjusted'));
+      let filteredEvents = events.filter(e => 
+        e.type !== 'start' && 
+        e.type !== 'cycle' && 
+        e.type !== 'end' &&  // Filter out end events, we'll add a properly formatted one
+        !e.message?.includes('Time adjusted') &&
+        !e.message?.includes('Cycle') &&
+        !e.message?.includes('started')
+      );
 
-      doc.autoTable({
-        startY: yPos,
-        head: [['Time', 'Event', 'Cycle']],
-        body: filteredEvents.map(formatEventForPDF),
-        theme: 'striped',
-        styles: { fontSize: 8 },
-        margin: { left: 15 },
-        headStyles: { fillColor: [30, 64, 175] }
-      });
-      yPos = doc.lastAutoTable.finalY + 8;
+      // Add session end event if session has ended (with Cycle -)
+      if (sessionEnded && finalOutcome) {
+        const endEvent = {
+          type: 'end',
+          timestamp: new Date().toLocaleTimeString(),
+          cycle: '-',
+          outcome: finalOutcome
+        };
+        filteredEvents = [...filteredEvents, endEvent];
+      }
+
+      const tableRows = filteredEvents.map(formatEventForPDF).filter(row => row !== null);
+
+      if (tableRows.length > 0) {
+        doc.autoTable({
+          startY: yPos,
+          head: [['Time', 'Event', 'Cycle']],
+          body: tableRows,
+          theme: 'striped',
+          styles: { fontSize: 8 },
+          margin: { left: 15 },
+          headStyles: { fillColor: [30, 64, 175] }
+        });
+        yPos = doc.lastAutoTable.finalY + 8;
+      }
     }
 
     // Notes section - wrap text properly within A4 margins
@@ -1576,12 +1887,54 @@ export default function CPRTracker() {
       doc.text(`Generated: ${new Date().toLocaleString()} | CPR Tracker - ACLS Compliant | Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
     }
 
-    // Download PDF
+    // Download PDF - use native file handling in Capacitor
     const fileName = `CPR_Session_${new Date().toISOString().slice(0, 10)}_${new Date().getTime()}.pdf`;
-    doc.save(fileName);
+    
+    if (Capacitor.isNativePlatform()) {
+      try {
+        // Generate PDF as base64
+        const pdfBase64 = doc.output('datauristring').split(',')[1];
+        
+        // Save to Cache directory (more accessible for sharing on iOS)
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: pdfBase64,
+          directory: Directory.Cache,
+          recursive: true
+        });
+        
+        // Get the file URI - use getUri to ensure proper format
+        const uriResult = await Filesystem.getUri({
+          path: fileName,
+          directory: Directory.Cache
+        });
+        
+        // Share the file (opens native share sheet - allows save, share, print)
+        await Share.share({
+          title: 'CPR Session Report',
+          text: 'CPR Session Report PDF',
+          url: uriResult.uri,
+          dialogTitle: 'Share CPR Report'
+        });
+        
+        toast.success('PDF ready to share or save', {
+          duration: 3000,
+          position: 'bottom-center'
+        });
+      } catch (error) {
+        console.error('Error exporting PDF:', error);
+        toast.error('Failed to export PDF. Please try again.', {
+          duration: 3000,
+          position: 'bottom-center'
+        });
+      }
+    } else {
+      // For web: Use standard save method
+      doc.save(fileName);
+    }
   };
 
-  const exportHTML = () => {
+  const exportHTML = async () => {
     const formatTime = (seconds) => {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
@@ -1607,19 +1960,50 @@ export default function CPRTracker() {
       ? formatOutcome(finalOutcome)
       : 'Ongoing - CPR in progress';
 
-    const filteredEvents = events.filter(e => e.type !== 'start' && !e.message?.includes('Time adjusted'));
+    let filteredEvents = events.filter(e => 
+      e.type !== 'start' && 
+      e.type !== 'cycle' && 
+      e.type !== 'end' &&  // Filter out end events, we'll add a properly formatted one
+      !e.message?.includes('Time adjusted') &&
+      !e.message?.includes('Cycle') &&
+      !e.message?.includes('started')
+    );
+
+    // Add session end event if session has ended (with Cycle -)
+    if (sessionEnded && finalOutcome) {
+      const endEvent = {
+        type: 'end',
+        timestamp: new Date().toLocaleTimeString(),
+        cycle: '-',
+        outcome: finalOutcome
+      };
+      filteredEvents = [...filteredEvents, endEvent];
+    }
 
     const formatEventForHTML = (e) => {
       let description = '';
       switch (e.type) {
         case 'rhythm':
-          description = e.message;
+          // Format as "Rhythm Check: VF" instead of "Rhythm identified: VF"
+          const rhythmMatch = e.message.match(/Rhythm identified: (\w+)/);
+          if (rhythmMatch) {
+            description = `Rhythm Check: ${rhythmMatch[1]}`;
+          } else {
+            description = e.message.replace('Rhythm identified: ', 'Rhythm Check: ');
+          }
           break;
         case 'shock':
           description = `Shock Delivered @ ${e.energy}J (Rhythm: ${e.rhythmBefore})`;
           break;
         case 'compressor':
-          description = e.message;
+          // Simplify compressor messages to "Compressor Changed"
+          if (e.message.includes('Compressor changed') || e.message.includes('compressor changed')) {
+            description = 'Compressor Changed';
+          } else if (e.message.includes('LUCAS')) {
+            description = e.message;
+          } else {
+            description = 'Compressor Changed';
+          }
           break;
         case 'pulse':
           description = 'Pulse Check Performed';
@@ -1639,8 +2023,8 @@ export default function CPRTracker() {
         case 'procedure':
           description = e.procedure || 'Procedure Performed';
           break;
-        case 'cycle':
-          description = e.message;
+        case 'end':
+          description = `CPR Session Ended (Outcome: ${formatOutcome(e.outcome)})`;
           break;
         default:
           description = e.message;
@@ -1744,10 +2128,28 @@ export default function CPRTracker() {
         <h1>CPR Session Report</h1>
 
         <div class="summary-box">
-          <p><strong>Start:</strong> ${startTime || 'N/A'}</p>
+          <p><strong>Start:</strong> ${(() => {
+            if (!startTime) return 'N/A';
+            try {
+              const date = new Date(startTime);
+              if (!isNaN(date.getTime())) {
+                const formatted = date.toLocaleString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric', 
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                });
+                // Format as "Jan 5, 2026 00:10" (keep comma, replace space between date and time)
+                return formatted.replace(/(\d{4}) (\d{2}:\d{2})/, '$1 $2');
+              }
+            } catch (e) {}
+            return startTime;
+          })()}</p>
           <p><strong>Duration:</strong> ${formatTime(totalSeconds)}</p>
           <p><strong>Cycles:</strong> ${currentCycle}</p>
-          <p><strong>${sessionEnded && finalOutcome ? 'Outcome' : 'Rhythm'}:</strong> ${outcomeText}</p>
+          <p><strong>Outcome:</strong> ${outcomeText}</p>
         </div>
 
         ${(!sessionEnded || !finalOutcome) ? `
@@ -1804,20 +2206,57 @@ export default function CPRTracker() {
       </html>
     `;
 
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const newWindow = window.open(url, '_blank');
-
-    if (newWindow) {
-      newWindow.onload = () => {
-        setTimeout(() => URL.revokeObjectURL(url), 100);
-      };
+    // Export HTML - use native file handling in Capacitor
+    const fileName = `CPR_Session_${new Date().toISOString().slice(0, 10)}_${new Date().getTime()}.html`;
+    
+    if (Capacitor.isNativePlatform()) {
+      try {
+        // Convert HTML to base64
+        const htmlBase64 = btoa(unescape(encodeURIComponent(htmlContent)));
+        
+        // Save to Cache directory (more accessible for sharing on iOS)
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: htmlBase64,
+          directory: Directory.Cache,
+          recursive: true
+        });
+        
+        // Get the file URI - use getUri to ensure proper format
+        const uriResult = await Filesystem.getUri({
+          path: fileName,
+          directory: Directory.Cache
+        });
+        
+        // Share the file (opens native share sheet - allows save, share, print)
+        await Share.share({
+          title: 'CPR Session Report',
+          text: 'CPR Session Report HTML',
+          url: uriResult.uri,
+          dialogTitle: 'Share CPR Report'
+        });
+        
+        toast.success('HTML report ready to share or save', {
+          duration: 3000,
+          position: 'bottom-center'
+        });
+      } catch (error) {
+        console.error('Error exporting HTML:', error);
+        toast.error('Failed to export HTML. Please try again.', {
+          duration: 3000,
+          position: 'bottom-center'
+        });
+      }
     } else {
-      // Fallback to download if popup blocked
+      // For web: Use blob URL
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `CPR_Session_${new Date().toISOString().slice(0, 10)}_${new Date().getTime()}.html`;
+      a.download = fileName;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 100);
     }
   };
@@ -1962,11 +2401,20 @@ export default function CPRTracker() {
             <textarea
               value={doctorNotes}
               onChange={(e) => setDoctorNotes(e.target.value.slice(0, 400))}
+              onBlur={(e) => {
+                // Reset zoom on iOS when textarea loses focus
+                if (Capacitor.isNativePlatform()) {
+                  window.scrollTo(0, 0);
+                  document.body.scrollTop = 0;
+                  document.documentElement.scrollTop = 0;
+                }
+              }}
               placeholder="text or talk"
               maxLength={400}
               rows={6}
               disabled={!hasStarted}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-base resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ fontSize: '16px' }}
             />
             <div className="text-xs text-slate-500 mt-1 text-right">
               {doctorNotes.length}/400 characters
@@ -2159,10 +2607,12 @@ export default function CPRTracker() {
         <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl">Export Report</DialogTitle>
+            <DialogDescription className="text-slate-400 text-sm">
+              Choose export format:
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-4">
-            <p className="text-slate-400 text-sm">Choose export format:</p>
 
             <Button
               onClick={() => {

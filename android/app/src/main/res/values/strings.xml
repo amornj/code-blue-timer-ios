@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">code-blue-timer</string>
+    <string name="title_activity_main">code-blue-timer</string>
+    <string name="package_name">com.amornj.codebluetimer</string>
+    <string name="custom_url_scheme">com.amornj.codebluetimer</string>
+</resources>

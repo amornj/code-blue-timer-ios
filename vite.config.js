@@ -15,5 +15,5 @@ export default defineConfig({
       visualEditAgent: true
     }),
     react(),
-  ]
+  ],
 });
