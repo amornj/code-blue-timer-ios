@@ -21,6 +21,7 @@ import ShockButton from '@/components/cpr/ShockButton';
 import EventLog from '@/components/cpr/EventLog';
 import CommonMedications from '@/components/cpr/CommonMedications';
 import CommonProcedures from '@/components/cpr/CommonProcedures';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 
 // Import audio files
 import adrenalineAudio from '@/adrenaline.mp3';
@@ -48,6 +49,17 @@ export default function CPRTracker() {
   const [hasStarted, setHasStarted] = useState(false); // Track if CPR has been started
   const [soundEnabled, setSoundEnabled] = useState(false); // Sound toggle
   const [totalSeconds, setTotalSeconds] = useState(0);
+  
+  // Header visibility state
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const headerHideTimerRef = useRef(null);
+  const lastScrollYRef = useRef(0);
+  const touchStartYRef = useRef(0);
+  
+  // Carousel state for page indicators
+  const [currentPage, setCurrentPage] = useState(0);
+  const carouselApiRef = useRef(null);
+  
   const [cycleSeconds, setCycleSeconds] = useState(0);
   const [currentCycle, setCurrentCycle] = useState(1);
   const [startTime, setStartTime] = useState(null);
@@ -133,7 +145,16 @@ export default function CPRTracker() {
   const xylocaineAudioRef = useRef(null);
   const pulsecheckAudioRef = useRef(null);
   
-  // Audio queue system
+  // Audio queue system with priority
+  // Priority order: pulsecheck (1, highest) > adrenaline (2) > amiodarone (3) > xylocaine (4, lowest)
+  const AUDIO_PRIORITIES = {
+    pulsecheck: 1,
+    adrenaline: 2,
+    amiodarone300: 3,
+    amiodarone150: 3,
+    xylocaine: 4
+  };
+  
   const audioQueueRef = useRef([]);
   const isPlayingAudioRef = useRef(false);
   const lastAudioPlayTimeRef = useRef(0);
@@ -244,11 +265,26 @@ export default function CPRTracker() {
     }
   }, []);
 
-  // Function to queue audio playback
+  // Function to queue audio playback with priority ordering
   const queueAudio = useCallback((audioFile) => {
     if (!soundEnabled || !isRunning) return;
     
-    audioQueueRef.current.push(audioFile);
+    const priority = AUDIO_PRIORITIES[audioFile] || 99;
+    
+    // Insert audio file into queue based on priority (lower number = higher priority)
+    // If priority is same, maintain FIFO order
+    const insertIndex = audioQueueRef.current.findIndex(
+      item => AUDIO_PRIORITIES[item] > priority
+    );
+    
+    if (insertIndex === -1) {
+      // No item with lower priority, add to end
+      audioQueueRef.current.push(audioFile);
+    } else {
+      // Insert before first item with lower priority
+      audioQueueRef.current.splice(insertIndex, 0, audioFile);
+    }
+    
     playAudioFromQueue();
   }, [soundEnabled, isRunning, playAudioFromQueue]);
 
@@ -453,16 +489,11 @@ export default function CPRTracker() {
       }
     }
 
-    // Determine adrenaline status - use shouldShow directly, not the state variable
+    // Determine adrenaline status - only 'active' or 'pending' (no 'completed' state like amiodarone/xylocaine)
     let adrenalineStatus = 'pending';
     const isAdrenalineSnoozed = adrenalineSnoozedUntil !== null && totalSeconds < adrenalineSnoozedUntil;
     if (shouldShowAdrenaline && !adrenalineDismissed && !isAdrenalineSnoozed) {
       adrenalineStatus = soundEnabled ? 'active' : 'pending';
-    } else if (timeSinceLastAdrenaline !== null) {
-      const timeUntilNext = adrenalineIntervalSeconds - timeSinceLastAdrenaline;
-      if (timeUntilNext > 30 && timeUntilNext < adrenalineIntervalSeconds) {
-        adrenalineStatus = 'completed';
-      }
     }
 
     // For shockable rhythms, always show ACLS drugs (both track and coach mode)
@@ -556,7 +587,79 @@ export default function CPRTracker() {
     };
   }, [isRunning]);
 
+  // Auto-hide header after 3 seconds (always, even during CPR session)
+  useEffect(() => {
+    // Clear existing timer
+    if (headerHideTimerRef.current) {
+      clearTimeout(headerHideTimerRef.current);
+    }
 
+    // Show header initially and set timer to hide it
+    setHeaderVisible(true);
+    headerHideTimerRef.current = setTimeout(() => {
+      setHeaderVisible(false);
+    }, 3000); // Hide after 3 seconds
+
+    return () => {
+      if (headerHideTimerRef.current) {
+        clearTimeout(headerHideTimerRef.current);
+      }
+    };
+  }, [hasStarted, isRunning]); // Reset timer when session starts/pauses
+
+  // Handle pull-to-refresh to show header
+  useEffect(() => {
+    const handleTouchStart = (e) => {
+      touchStartYRef.current = e.touches[0].clientY;
+      lastScrollYRef.current = window.scrollY;
+    };
+
+    const handleTouchMove = (e) => {
+      const currentY = e.touches[0].clientY;
+      const deltaY = currentY - touchStartYRef.current;
+      const scrollY = window.scrollY;
+
+      // Detect pull-down gesture (scrolling up from top)
+      if (scrollY <= 0 && deltaY > 50) {
+        setHeaderVisible(true);
+        // Reset timer when header is shown via pull
+        if (headerHideTimerRef.current) {
+          clearTimeout(headerHideTimerRef.current);
+        }
+        headerHideTimerRef.current = setTimeout(() => {
+          setHeaderVisible(false);
+        }, 3000);
+      }
+    };
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show header when scrolling to top
+      if (currentScrollY <= 0 && lastScrollYRef.current > 0) {
+        setHeaderVisible(true);
+        if (headerHideTimerRef.current) {
+          clearTimeout(headerHideTimerRef.current);
+        }
+        headerHideTimerRef.current = setTimeout(() => {
+          setHeaderVisible(false);
+        }, 3000);
+      }
+      
+      lastScrollYRef.current = currentScrollY;
+    };
+
+    // Add event listeners
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   // Play medication alert audio files when alerts become active
   useEffect(() => {
@@ -599,43 +702,72 @@ export default function CPRTracker() {
       }
     }
 
-    // Reset audio flags when snooze expires (so audio can play again after snooze)
+    // Clear snooze state when snooze expires and prevent audio from replaying
+    // Don't reset audio flags here - only reset when alert becomes inactive
     if (adrenalineSnoozedUntil !== null && totalSeconds >= adrenalineSnoozedUntil) {
-      playedAudioRef.current.adrenaline = false;
+      setAdrenalineSnoozedUntil(null);
     }
     if (amiodarone300SnoozedUntil !== null && totalSeconds >= amiodarone300SnoozedUntil) {
-      playedAudioRef.current.amiodarone300 = false;
+      setAmiodarone300SnoozedUntil(null);
     }
     if (amiodarone150SnoozedUntil !== null && totalSeconds >= amiodarone150SnoozedUntil) {
-      playedAudioRef.current.amiodarone150 = false;
+      setAmiodarone150SnoozedUntil(null);
     }
-    if ((lidocaine1mgSnoozedUntil !== null && totalSeconds >= lidocaine1mgSnoozedUntil) ||
-        (lidocaine05mgSnoozedUntil !== null && totalSeconds >= lidocaine05mgSnoozedUntil)) {
-      playedAudioRef.current.xylocaine = false;
+    if (lidocaine1mgSnoozedUntil !== null && totalSeconds >= lidocaine1mgSnoozedUntil) {
+      setLidocaine1mgSnoozedUntil(null);
+    }
+    if (lidocaine05mgSnoozedUntil !== null && totalSeconds >= lidocaine05mgSnoozedUntil) {
+      setLidocaine05mgSnoozedUntil(null);
     }
 
-    // Reset audio flags when alerts are reactivated after dismissal
-    // Detect when dismissed flag changes from true to false
+    // Reset audio flags when alerts become inactive (not due anymore)
+    // This prevents audio from replaying when snooze expires if alert is still active
     if (prevDismissedRef.current.adrenaline && !adrenalineDismissed) {
+      // Alert reactivated after dismissal
+      if (!adrenalineDue) {
+        playedAudioRef.current.adrenaline = false;
+      }
+    } else if (!adrenalineDue && prevDismissedRef.current.adrenalineDue) {
+      // Alert became inactive
       playedAudioRef.current.adrenaline = false;
     }
+    
     if (prevDismissedRef.current.amiodarone300 && !amiodarone300Dismissed) {
+      if (!amiodarone300Due) {
+        playedAudioRef.current.amiodarone300 = false;
+      }
+    } else if (!amiodarone300Due && prevDismissedRef.current.amiodarone300Due) {
       playedAudioRef.current.amiodarone300 = false;
     }
+    
     if (prevDismissedRef.current.amiodarone150 && !amiodarone150Dismissed) {
+      if (!amiodarone150Due) {
+        playedAudioRef.current.amiodarone150 = false;
+      }
+    } else if (!amiodarone150Due && prevDismissedRef.current.amiodarone150Due) {
       playedAudioRef.current.amiodarone150 = false;
     }
+    
     const xylocaineWasDismissed = prevDismissedRef.current.xylocaine;
     const xylocaineIsDismissed = lidocaine1mgDismissed && lidocaine05mgDismissed;
+    const xylocaineIsDue = lidocaine1mgDue || lidocaine05mgDue;
     if (xylocaineWasDismissed && !xylocaineIsDismissed) {
+      if (!xylocaineIsDue) {
+        playedAudioRef.current.xylocaine = false;
+      }
+    } else if (!xylocaineIsDue && prevDismissedRef.current.xylocaineDue) {
       playedAudioRef.current.xylocaine = false;
     }
 
-    // Update previous dismissed states
+    // Update previous states
     prevDismissedRef.current.adrenaline = adrenalineDismissed;
     prevDismissedRef.current.amiodarone300 = amiodarone300Dismissed;
     prevDismissedRef.current.amiodarone150 = amiodarone150Dismissed;
     prevDismissedRef.current.xylocaine = xylocaineIsDismissed;
+    prevDismissedRef.current.adrenalineDue = adrenalineDue;
+    prevDismissedRef.current.amiodarone300Due = amiodarone300Due;
+    prevDismissedRef.current.amiodarone150Due = amiodarone150Due;
+    prevDismissedRef.current.xylocaineDue = xylocaineIsDue;
   }, [adrenalineDue, amiodarone300Due, amiodarone150Due, lidocaine1mgDue, lidocaine05mgDue, 
       adrenalineDismissed, amiodarone300Dismissed, amiodarone150Dismissed, 
       lidocaine1mgDismissed, lidocaine05mgDismissed,
@@ -926,8 +1058,7 @@ export default function CPRTracker() {
     const prevSnoozedUntil = adrenalineSnoozedUntil;
     const snoozeUntil = totalSeconds + 90; // 90 seconds from now
     setAdrenalineSnoozedUntil(snoozeUntil);
-    // Reset audio tracking so it can play again after snooze expires
-    playedAudioRef.current.adrenaline = false;
+    // Keep audio flag true to prevent replay while snoozed
 
     toast.info('Adrenaline alarm snoozed for 90 seconds', {
       duration: 4000,
@@ -1075,8 +1206,7 @@ export default function CPRTracker() {
       const prevSnoozedUntil = amiodarone300SnoozedUntil;
       const snoozeUntil = totalSeconds + 90;
       setAmiodarone300SnoozedUntil(snoozeUntil);
-      // Reset audio tracking so it can play again after snooze expires
-      playedAudioRef.current.amiodarone300 = false;
+      // Keep audio flag true to prevent replay while snoozed
 
       toast.info('Amiodarone 300mg alarm snoozed for 90 seconds', {
         duration: 4000,
@@ -1092,8 +1222,7 @@ export default function CPRTracker() {
       const prevSnoozedUntil = amiodarone150SnoozedUntil;
       const snoozeUntil = totalSeconds + 90;
       setAmiodarone150SnoozedUntil(snoozeUntil);
-      // Reset audio tracking so it can play again after snooze expires
-      playedAudioRef.current.amiodarone150 = false;
+      // Keep audio flag true to prevent replay while snoozed
 
       toast.info('Amiodarone 150mg alarm snoozed for 90 seconds', {
         duration: 4000,
@@ -1288,8 +1417,7 @@ export default function CPRTracker() {
       const prevSnoozedUntil = lidocaine1mgSnoozedUntil;
       const snoozeUntil = totalSeconds + 90;
       setLidocaine1mgSnoozedUntil(snoozeUntil);
-      // Reset audio tracking so it can play again after snooze expires
-      playedAudioRef.current.xylocaine = false;
+      // Keep audio flag true to prevent replay while snoozed
 
       toast.info('Xylocaine 1st dose alarm snoozed for 90 seconds', {
         duration: 4000,
@@ -1305,8 +1433,7 @@ export default function CPRTracker() {
       const prevSnoozedUntil = lidocaine05mgSnoozedUntil;
       const snoozeUntil = totalSeconds + 90;
       setLidocaine05mgSnoozedUntil(snoozeUntil);
-      // Reset audio tracking so it can play again after snooze expires
-      playedAudioRef.current.xylocaine = false;
+      // Keep audio flag true to prevent replay while snoozed
 
       toast.info('Xylocaine subsequent dose alarm snoozed for 90 seconds', {
         duration: 4000,
@@ -2267,8 +2394,18 @@ export default function CPRTracker() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-6">
       <Toaster position="bottom-center" richColors />
 
-      {/* Header */}
-      <div className="max-w-6xl mx-auto mb-6">
+      {/* Header - Auto-hiding */}
+      <div 
+        className={`max-w-6xl mx-auto mb-6 transition-all duration-300 ease-in-out ${
+          headerVisible 
+            ? 'opacity-100 translate-y-0' 
+            : 'opacity-0 -translate-y-full pointer-events-none'
+        }`}
+        style={{ 
+          maxHeight: headerVisible ? '200px' : '0px',
+          overflow: headerVisible ? 'visible' : 'hidden'
+        }}
+      >
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
@@ -2296,7 +2433,17 @@ export default function CPRTracker() {
               </Button>
             ) : (
               <Button 
-                onClick={() => setShowConfirmEnd(true)}
+                onClick={() => {
+                  setShowConfirmEnd(true);
+                  // Show header briefly when clicking end session, then auto-hide
+                  setHeaderVisible(true);
+                  if (headerHideTimerRef.current) {
+                    clearTimeout(headerHideTimerRef.current);
+                  }
+                  headerHideTimerRef.current = setTimeout(() => {
+                    setHeaderVisible(false);
+                  }, 3000);
+                }}
                 className="bg-red-600 hover:bg-red-700 text-white px-6 h-12 text-lg font-semibold"
               >
                 <Square className="w-5 h-5 mr-2" />
@@ -2317,110 +2464,190 @@ export default function CPRTracker() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Timer and Cycle Row */}
-        <CycleTracker 
-          cycle={currentCycle} 
-          cycleSeconds={cycleSeconds}
-          totalSeconds={totalSeconds}
-          shockCount={shockCount}
-          adrenalineCount={adrenalineCount}
-          amiodaroneTotal={amiodaroneTotal}
-          lidocaineCumulativeDose={lidocaineCumulativeDose}
-          soundEnabled={soundEnabled}
-          onSoundToggle={setSoundEnabled}
-          hasStarted={hasStarted}
-          onSyncCycle={handleSyncCycle}
-          adrenalineFrequency={adrenalineFrequency}
-          lastAdrenalineTime={lastAdrenalineTime}
-        />
+      {/* Main Content - Swipeable Pages */}
+      <div className="max-w-6xl mx-auto pb-16">
+        <Carousel 
+          className="w-full" 
+          opts={{ 
+            align: "start",
+            loop: true,
+            dragFree: false,
+          }}
+          setApi={(api) => {
+            // Store carousel API for page indicator navigation
+            if (api) {
+              carouselApiRef.current = api;
+              
+              // Listen to slide changes to update current page
+              api.on('select', () => {
+                // Handle looping - ensure page is always 0, 1, or 2
+                const selectedIndex = api.selectedScrollSnap();
+                setCurrentPage(selectedIndex % 3);
+              });
+              
+              // Set initial page
+              const initialIndex = api.selectedScrollSnap();
+              setCurrentPage(initialIndex % 3);
+            }
+          }}
+        >
+          <CarouselContent className="-ml-0">
+            {/* Page 1: Timer/Cycle Tracker and Event Log */}
+            <CarouselItem className="pl-0">
+              <div className="space-y-6 pb-6">
+                {/* Timer and Cycle Row */}
+                <CycleTracker 
+                  cycle={currentCycle} 
+                  cycleSeconds={cycleSeconds}
+                  totalSeconds={totalSeconds}
+                  shockCount={shockCount}
+                  adrenalineCount={adrenalineCount}
+                  amiodaroneTotal={amiodaroneTotal}
+                  lidocaineCumulativeDose={lidocaineCumulativeDose}
+                  soundEnabled={soundEnabled}
+                  onSoundToggle={setSoundEnabled}
+                  hasStarted={hasStarted}
+                  onSyncCycle={handleSyncCycle}
+                  adrenalineFrequency={adrenalineFrequency}
+                  lastAdrenalineTime={lastAdrenalineTime}
+                />
 
-        {/* Rhythm Selector */}
-        <RhythmSelector 
-          currentRhythm={currentRhythm} 
-          rhythmSelectionStage={rhythmSelectionStage}
-          onRhythmChange={handleRhythmChange}
-          onShockDelivered={handleShockDelivered}
-          shockCount={shockCount}
-          shockDeliveredThisCycle={shockDeliveredThisCycle}
-          isRunning={isRunning}
-          disabled={!hasStarted}
-          soundEnabled={soundEnabled}
-        />
+                {/* Event Log */}
+                <EventLog events={events} />
+              </div>
+            </CarouselItem>
 
-        {/* Event Banners */}
-        <EventBanner 
-          events={bannerEvents}
-          onConfirmCompressorChange={handleConfirmCompressorChange}
-          onConfirmPulseCheck={handleConfirmPulseCheck}
-          onConfirmAdrenaline={handleConfirmAdrenaline}
-          onDismissAdrenaline={handleDismissAdrenaline}
-          onSnoozeAdrenaline={handleSnoozeAdrenaline}
-          onConfirmAmiodarone={handleConfirmAmiodarone}
-          onDismissAmiodarone={handleDismissAmiodarone}
-          onSnoozeAmiodarone={handleSnoozeAmiodarone}
-          onConfirmLidocaine={handleConfirmLidocaine}
-          onDismissLidocaine={handleDismissLidocaine}
-          onSnoozeLidocaine={handleSnoozeLidocaine}
-          onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
-          onSyncPulseCheck={handleSyncPulseCheck}
-          pulseCheckSynced={pulseCheckSynced}
-          lucasActive={lucasActive}
-          onToggleLucas={handleToggleLucas}
-          soundEnabled={soundEnabled}
-          adrenalineSnoozed={adrenalineSnoozedUntil !== null && totalSeconds < adrenalineSnoozedUntil}
-          amiodaroneSnoozed={(amiodarone300SnoozedUntil !== null && totalSeconds < amiodarone300SnoozedUntil) || (amiodarone150SnoozedUntil !== null && totalSeconds < amiodarone150SnoozedUntil)}
-          lidocaineSnoozed={(lidocaine1mgSnoozedUntil !== null && totalSeconds < lidocaine1mgSnoozedUntil) || (lidocaine05mgSnoozedUntil !== null && totalSeconds < lidocaine05mgSnoozedUntil)}
-          disabled={!hasStarted}
-        />
+            {/* Page 2: Rhythm Selector and Event Banners */}
+            <CarouselItem className="pl-0">
+              <div className="space-y-6 pb-6">
+                {/* Rhythm Selector */}
+                <RhythmSelector 
+                  currentRhythm={currentRhythm} 
+                  rhythmSelectionStage={rhythmSelectionStage}
+                  onRhythmChange={handleRhythmChange}
+                  onShockDelivered={handleShockDelivered}
+                  shockCount={shockCount}
+                  shockDeliveredThisCycle={shockDeliveredThisCycle}
+                  isRunning={isRunning}
+                  disabled={!hasStarted}
+                  soundEnabled={soundEnabled}
+                />
 
-        {/* Common Medications */}
-        <CommonMedications 
-          onAddMedication={handleAddDiscretionaryMed} 
-          medicationCounts={medicationCounts}
-          disabled={!hasStarted}
-        />
+                {/* Event Banners */}
+                <EventBanner 
+                  events={bannerEvents}
+                  onConfirmCompressorChange={handleConfirmCompressorChange}
+                  onConfirmPulseCheck={handleConfirmPulseCheck}
+                  onConfirmAdrenaline={handleConfirmAdrenaline}
+                  onDismissAdrenaline={handleDismissAdrenaline}
+                  onSnoozeAdrenaline={handleSnoozeAdrenaline}
+                  onConfirmAmiodarone={handleConfirmAmiodarone}
+                  onDismissAmiodarone={handleDismissAmiodarone}
+                  onSnoozeAmiodarone={handleSnoozeAmiodarone}
+                  onConfirmLidocaine={handleConfirmLidocaine}
+                  onDismissLidocaine={handleDismissLidocaine}
+                  onSnoozeLidocaine={handleSnoozeLidocaine}
+                  onAdrenalineFrequencyChange={handleAdrenalineFrequencyChange}
+                  onSyncPulseCheck={handleSyncPulseCheck}
+                  pulseCheckSynced={pulseCheckSynced}
+                  lucasActive={lucasActive}
+                  onToggleLucas={handleToggleLucas}
+                  soundEnabled={soundEnabled}
+                  adrenalineSnoozed={adrenalineSnoozedUntil !== null && totalSeconds < adrenalineSnoozedUntil}
+                  amiodaroneSnoozed={(amiodarone300SnoozedUntil !== null && totalSeconds < amiodarone300SnoozedUntil) || (amiodarone150SnoozedUntil !== null && totalSeconds < amiodarone150SnoozedUntil)}
+                  lidocaineSnoozed={(lidocaine1mgSnoozedUntil !== null && totalSeconds < lidocaine1mgSnoozedUntil) || (lidocaine05mgSnoozedUntil !== null && totalSeconds < lidocaine05mgSnoozedUntil)}
+                  adrenalineSnoozeRemaining={adrenalineSnoozedUntil !== null && totalSeconds < adrenalineSnoozedUntil ? Math.max(0, adrenalineSnoozedUntil - totalSeconds) : null}
+                  amiodaroneSnoozeRemaining={(() => {
+                    if (amiodarone300SnoozedUntil !== null && totalSeconds < amiodarone300SnoozedUntil) {
+                      return Math.max(0, amiodarone300SnoozedUntil - totalSeconds);
+                    }
+                    if (amiodarone150SnoozedUntil !== null && totalSeconds < amiodarone150SnoozedUntil) {
+                      return Math.max(0, amiodarone150SnoozedUntil - totalSeconds);
+                    }
+                    return null;
+                  })()}
+                  lidocaineSnoozeRemaining={(() => {
+                    if (lidocaine1mgSnoozedUntil !== null && totalSeconds < lidocaine1mgSnoozedUntil) {
+                      return Math.max(0, lidocaine1mgSnoozedUntil - totalSeconds);
+                    }
+                    if (lidocaine05mgSnoozedUntil !== null && totalSeconds < lidocaine05mgSnoozedUntil) {
+                      return Math.max(0, lidocaine05mgSnoozedUntil - totalSeconds);
+                    }
+                    return null;
+                  })()}
+                  disabled={!hasStarted}
+                />
+              </div>
+            </CarouselItem>
 
-        {/* Common Procedures */}
-        <CommonProcedures 
-          onAddProcedure={handleAddProcedure} 
-          usedProcedures={usedProcedures}
-          disabled={!hasStarted}
-        />
+            {/* Page 3: Common Medications, Procedures, and Notes */}
+            <CarouselItem className="pl-0">
+              <div className="space-y-6 pb-6">
+                {/* Common Medications */}
+                <CommonMedications 
+                  onAddMedication={handleAddDiscretionaryMed} 
+                  medicationCounts={medicationCounts}
+                  disabled={!hasStarted}
+                />
 
-        {/* Event Log */}
-        <EventLog events={events} />
+                {/* Common Procedures */}
+                <CommonProcedures 
+                  onAddProcedure={handleAddProcedure} 
+                  usedProcedures={usedProcedures}
+                  disabled={!hasStarted}
+                />
 
-            {/* Notes Section */}
-            <div className="grid grid-cols-1 gap-6">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
-            <label className="text-slate-300 font-semibold mb-2 block">
-              📝 Notes
-            </label>
-            <textarea
-              value={doctorNotes}
-              onChange={(e) => setDoctorNotes(e.target.value.slice(0, 400))}
-              onBlur={(e) => {
-                // Reset zoom on iOS when textarea loses focus
-                if (Capacitor.isNativePlatform()) {
-                  window.scrollTo(0, 0);
-                  document.body.scrollTop = 0;
-                  document.documentElement.scrollTop = 0;
+                {/* Notes Section */}
+                <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-2xl">
+                  <label className="text-slate-300 font-semibold mb-2 block">
+                    📝 Notes
+                  </label>
+                  <textarea
+                    value={doctorNotes}
+                    onChange={(e) => setDoctorNotes(e.target.value.slice(0, 400))}
+                    onBlur={(e) => {
+                      // Reset zoom on iOS when textarea loses focus
+                      if (Capacitor.isNativePlatform()) {
+                        window.scrollTo(0, 0);
+                        document.body.scrollTop = 0;
+                        document.documentElement.scrollTop = 0;
+                      }
+                    }}
+                    placeholder="text or talk"
+                    maxLength={400}
+                    rows={6}
+                    disabled={!hasStarted}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-base resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ fontSize: '16px' }}
+                  />
+                  <div className="text-xs text-slate-500 mt-1 text-right">
+                    {doctorNotes.length}/400 characters
+                  </div>
+                </div>
+              </div>
+            </CarouselItem>
+          </CarouselContent>
+        </Carousel>
+        
+        {/* Page Indicator Dots */}
+        <div className="flex justify-center items-center gap-3 mt-4 mb-4 fixed bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+          {[0, 1, 2].map((index) => (
+            <button
+              key={index}
+              onClick={() => {
+                if (carouselApiRef.current) {
+                  carouselApiRef.current.scrollTo(index);
                 }
               }}
-              placeholder="text or talk"
-              maxLength={400}
-              rows={6}
-              disabled={!hasStarted}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-base resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ fontSize: '16px' }}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                currentPage === index
+                  ? 'bg-blue-500 w-8'
+                  : 'bg-slate-600 hover:bg-slate-500'
+              }`}
+              aria-label={`Go to page ${index + 1}`}
             />
-            <div className="text-xs text-slate-500 mt-1 text-right">
-              {doctorNotes.length}/400 characters
-              </div>
-              </div>
-              </div>
+          ))}
+        </div>
       </div>
 
       {/* Confirm End Session Dialog */}

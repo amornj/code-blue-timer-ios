@@ -26,6 +26,9 @@ export default function EventBanner({
   adrenalineSnoozed = false,
   amiodaroneSnoozed = false,
   lidocaineSnoozed = false,
+  adrenalineSnoozeRemaining = null,
+  amiodaroneSnoozeRemaining = null,
+  lidocaineSnoozeRemaining = null,
   disabled = false
 }) {
   const adrenalineRef = useRef(null);
@@ -191,7 +194,23 @@ export default function EventBanner({
                     <Check className="w-4 h-4 mr-1" /> Give Now
                   </Button>
                   <div className="text-center text-yellow-400 text-xs font-semibold">
-                    Snoozed
+                    {(() => {
+                      let remaining = null;
+                      if (event.type === 'adrenaline') {
+                        remaining = adrenalineSnoozeRemaining;
+                      } else if (event.type === 'amiodarone') {
+                        remaining = amiodaroneSnoozeRemaining;
+                      } else if (event.type === 'lidocaine') {
+                        remaining = lidocaineSnoozeRemaining;
+                      }
+                      
+                      if (remaining !== null && remaining > 0) {
+                        const mins = Math.floor(remaining / 60);
+                        const secs = remaining % 60;
+                        return `Snoozed ${mins}:${secs.toString().padStart(2, '0')}`;
+                      }
+                      return 'Snoozed';
+                    })()}
                   </div>
                 </div>
               )}

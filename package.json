@@ -1,7 +1,7 @@
 {
-  "name": "base44-app",
+  "name": "Code Blue Timer",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,8 +15,7 @@
     "@base44/sdk": "^0.8.3",
     "@base44/vite-plugin": "^0.2.14",
     "@capacitor/android": "^6.1.0",
-    "@capacitor/cli": "^6.1.0",
-    "@capacitor/core": "^6.1.0",
+    "@capacitor/core": "^6.2.1",
     "@capacitor/filesystem": "^6.0.1",
     "@capacitor/ios": "^6.1.0",
     "@capacitor/share": "^6.0.1",
@@ -88,6 +87,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
     "@eslint/js": "^9.19.0",
     "@types/node": "^22.13.5",
     "@types/react": "^18.2.66",
